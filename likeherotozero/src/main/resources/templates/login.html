@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="de">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login | Like Hero To Zero</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f4f7fb;
+            color: #1f2937;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background-color: #ffffff;
+            border-bottom: 1px solid #dbe3ea;
+            padding: 16px 32px;
+        }
+
+        .header-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .brand-area {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .logo-box {
+            width: 70px;
+            height: 70px;
+            border: 1px dashed #9ca3af;
+            background-color: #f9fafb;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            border-radius: 10px;
+        }
+
+        .logo-box img {
+            max-width: 100%;
+            max-height: 100%;
+            display: block;
+        }
+
+        .brand-text h1 {
+            margin: 0;
+            font-size: 28px;
+            color: #0f172a;
+        }
+
+        .brand-text p {
+            margin: 6px 0 0 0;
+            color: #475569;
+        }
+
+        .back-link {
+            display: inline-block;
+            padding: 10px 18px;
+            background-color: #0f766e;
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: bold;
+        }
+
+        .back-link:hover {
+            background-color: #115e59;
+        }
+
+        main {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+
+        .login-wrapper {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .login-card {
+            width: 100%;
+            max-width: 460px;
+            padding: 36px 32px;
+            background-color: #ffffff;
+            border-radius: 14px;
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+            border: 1px solid #e5e7eb;
+        }
+
+        .login-card h2 {
+            margin: 0 0 10px 0;
+            font-size: 28px;
+            color: #0f172a;
+        }
+
+        .login-card p {
+            margin: 0 0 24px 0;
+            color: #64748b;
+            line-height: 1.6;
+        }
+
+        .message {
+            margin-bottom: 18px;
+            padding: 12px 14px;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .message-error {
+            background-color: #fff1f2;
+            border: 1px solid #fecdd3;
+            color: #9f1239;
+        }
+
+        .message-success {
+            background-color: #ecfdf5;
+            border: 1px solid #a7f3d0;
+            color: #065f46;
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #0f172a;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 15px;
+            background-color: #ffffff;
+            color: #1f2937;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #0f766e;
+            box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.14);
+        }
+
+        .login-submit {
+            width: 100%;
+            padding: 12px 18px;
+            background-color: #0f766e;
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 15px;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+
+        .login-submit:hover {
+            background-color: #115e59;
+        }
+
+        .login-note {
+            margin-top: 18px;
+            padding: 14px;
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            color: #475569;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        footer {
+            background-color: #0f172a;
+            color: #ffffff;
+            padding: 24px 32px;
+        }
+
+        .footer-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .footer-container p {
+            margin: 6px 0;
+        }
+
+        @media (max-width: 768px) {
+            header,
+            footer {
+                padding-left: 16px;
+                padding-right: 16px;
+            }
+
+            .header-container {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .brand-text h1 {
+                font-size: 24px;
+            }
+
+            .login-card {
+                padding: 24px 20px;
+            }
+
+            main {
+                padding: 24px 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-container">
+        <div class="brand-area">
+            <div class="logo-box">
+                <img th:src="@{/images/logo.png}" alt="Logo Like Hero To Zero" />
+            </div>
+
+            <div class="brand-text">
+                <h1>Like Hero To Zero</h1>
+                <p>Öffentliche Übersicht über Länder- und CO2-Daten.</p>
+            </div>
+        </div>
+
+        <a class="back-link" th:href="@{/}">Zur Startseite</a>
+    </div>
+</header>
+
+<main>
+    <div class="login-wrapper">
+        <section class="login-card">
+            <h2>Anmelden</h2>
+            <p>Bitte gib deinen Benutzernamen und dein Passwort ein.</p>
+
+            <div th:if="${param.error}" class="message message-error">
+                Benutzername oder Passwort ist falsch.
+            </div>
+
+            <div th:if="${param.logout}" class="message message-success">
+                Du wurdest erfolgreich abgemeldet.
+            </div>
+
+            <form th:action="@{/login}" method="post">
+                <div class="form-group">
+                    <label for="username">Benutzername</label>
+                    <input type="text" id="username" name="username" required="required" />
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Passwort</label>
+                    <input type="password" id="password" name="password" required="required" />
+                </div>
+
+                <button type="submit" class="login-submit">Login</button>
+            </form>
+
+            <div class="login-note">
+                Nur registrierte Scientists dürfen Daten verändern.
+            </div>
+        </section>
+    </div>
+</main>
+
+<footer>
+    <div class="footer-container">
+        <p><strong>Fake Impressum</strong></p>
+        <p>Like Hero To Zero GmbH, Musterstraße 12, 80331 München</p>
+        <p>E-Mail: info@likeherotozero.de | Telefon: +49 89 123456</p>
+    </div>
+</footer>
+
+</body>
+</html>

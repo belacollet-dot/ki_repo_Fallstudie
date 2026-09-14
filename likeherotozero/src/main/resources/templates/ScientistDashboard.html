@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="de">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Scientist Dashboard | Like Hero To Zero</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f4f7fb;
+            color: #1f2937;
+            min-height: 100vh;
+        }
+
+        header {
+            background-color: #ffffff;
+            border-bottom: 1px solid #dbe3ea;
+            padding: 16px 32px;
+        }
+
+        .header-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .brand-area {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .logo-box {
+            width: 70px;
+            height: 70px;
+            border: 1px dashed #9ca3af;
+            background-color: #f9fafb;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            border-radius: 10px;
+        }
+
+        .logo-box img {
+            max-width: 100%;
+            max-height: 100%;
+            display: block;
+        }
+
+        .brand-text h1 {
+            margin: 0;
+            font-size: 28px;
+            color: #0f172a;
+        }
+
+        .brand-text p {
+            margin: 6px 0 0 0;
+            color: #475569;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .header-user {
+            color: #334155;
+            font-weight: bold;
+        }
+
+        .header-link,
+        .logout-button,
+        .primary-button,
+        .secondary-button,
+        .icon-button {
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.2s ease;
+        }
+
+        .header-link,
+        .primary-button {
+            background-color: #0f766e;
+            color: #ffffff;
+            padding: 10px 18px;
+        }
+
+        .header-link:hover,
+        .primary-button:hover {
+            background-color: #115e59;
+        }
+
+        .secondary-button {
+            background-color: #e2e8f0;
+            color: #0f172a;
+            padding: 10px 18px;
+        }
+
+        .secondary-button:hover {
+            background-color: #cbd5e1;
+        }
+
+
+        .logout-button {
+            background-color: #0f172a;
+            color: #ffffff;
+            padding: 10px 18px;
+        }
+
+        .logout-button:hover {
+            background-color: #1e293b;
+        }
+
+        main {
+            max-width: 1200px;
+            margin: 32px auto;
+            padding: 0 32px;
+        }
+
+        .page-intro,
+        .dashboard-card {
+            background-color: #ffffff;
+            border-radius: 14px;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+        }
+
+        .page-intro {
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .page-intro h2 {
+            margin: 0 0 10px 0;
+            color: #0f172a;
+        }
+
+        .page-intro p {
+            margin: 0;
+            color: #64748b;
+            line-height: 1.6;
+        }
+
+        .message {
+            margin-bottom: 20px;
+            padding: 14px 16px;
+            border-radius: 10px;
+            font-size: 14px;
+        }
+
+        .message-success {
+            background-color: #ecfdf5;
+            border: 1px solid #a7f3d0;
+            color: #065f46;
+        }
+
+        .dashboard-card {
+            padding: 24px;
+        }
+
+        .dashboard-card h3 {
+            margin-top: 0;
+            margin-bottom: 8px;
+            color: #0f172a;
+        }
+
+        .dashboard-card p {
+            margin-top: 0;
+            color: #64748b;
+            line-height: 1.6;
+        }
+
+        .search-box {
+            margin: 18px 0 14px 0;
+        }
+
+        .search-box label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #0f172a;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 15px;
+            background-color: #ffffff;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: #0f766e;
+            box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.14);
+        }
+
+        .table-scroll {
+            max-height: 430px;
+            overflow-y: auto;
+            overflow-x: auto;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+        }
+
+        table {
+            width: 100%;
+            min-width: 760px;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background-color: #e2e8f0;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 12px 14px;
+            border-bottom: 1px solid #e5e7eb;
+            vertical-align: middle;
+            font-size: 14px;
+        }
+
+        tbody tr:hover {
+            background-color: #f8fafc;
+        }
+
+        .icon-button {
+            width: 40px;
+            height: 40px;
+            background-color: #e0f2fe;
+            color: #0f172a;
+            font-size: 18px;
+        }
+
+        .icon-button:hover {
+            background-color: #bae6fd;
+        }
+
+        .muted-text {
+            color: #64748b;
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #0f172a;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 15px;
+            background-color: #ffffff;
+            color: #1f2937;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #0f766e;
+            box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.14);
+        }
+
+        .field-error {
+            margin-top: 8px;
+            padding: 8px 10px;
+            border-radius: 8px;
+            background-color: #fff1f2;
+            border: 1px solid #fecdd3;
+            color: #9f1239;
+            font-size: 14px;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 8px;
+        }
+
+
+        .note-box,
+        .empty-state {
+            margin-top: 18px;
+            padding: 14px;
+            border-radius: 10px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .note-box {
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            color: #475569;
+        }
+
+        .empty-state {
+            background-color: #fff7ed;
+            border: 1px solid #fdba74;
+            color: #9a3412;
+        }
+
+        footer {
+            margin-top: 40px;
+            background-color: #0f172a;
+            color: #ffffff;
+            padding: 24px 32px;
+        }
+
+        .footer-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .footer-container p {
+            margin: 6px 0;
+        }
+
+        @media (max-width: 768px) {
+            header,
+            footer {
+                padding-left: 16px;
+                padding-right: 16px;
+            }
+
+            main {
+                padding: 0 16px;
+            }
+
+            .header-container {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .brand-text h1 {
+                font-size: 24px;
+            }
+        }
+
+        .table-scroll input {
+            width: 100%;
+            min-width: 120px;
+            padding: 10px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 14px;
+            background-color: #ffffff;
+            color: #1f2937;
+        }
+
+        .table-scroll input:focus {
+            outline: none;
+            border-color: #0f766e;
+            box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.14);
+        }
+
+
+        .dashboard-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(220px, 1fr));
+            gap: 18px;
+        }
+
+        .records-section {
+            margin-top: 28px;
+            padding-top: 18px;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .records-section h4 {
+            margin: 0 0 14px 0;
+            color: #0f172a;
+        }
+
+        #edit-section {
+            scroll-margin-top: 24px;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        @media (max-width: 768px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-container">
+        <div class="brand-area">
+            <div class="logo-box">
+                <img th:src="@{/images/logo.png}" alt="Logo Like Hero To Zero" />
+            </div>
+
+            <div class="brand-text">
+                <h1>Like Hero To Zero</h1>
+                <p>Scientist-Bereich zur Verwaltung von Länder- und Emissionsdaten.</p>
+            </div>
+        </div>
+
+        <div class="header-actions">
+            <span class="header-user">
+                Angemeldet als: <span th:text="${username}">Scientist</span>
+            </span>
+
+            <form th:action="@{/logout}" method="post">
+                <button type="submit" class="logout-button">Abmelden</button>
+            </form>
+        </div>
+    </div>
+</header>
+
+<main>
+    <section class="page-intro">
+        <h2>Scientist Dashboard</h2>
+        <p>
+            Wähle ein Land über den Bearbeitungsstift aus.
+            Direkt unter der Länderliste kannst du dann alle Datensätze dieses Landes bearbeiten.
+        </p>
+    </section>
+
+    <div th:if="${success == 'saved'}" class="message message-success">
+        Die Daten des Landes wurden erfolgreich gespeichert.
+    </div>
+
+    <div th:if="${success == 'record-added'}" class="message message-success">
+        Der neue Datensatz wurde erfolgreich hinzugefügt.
+    </div>
+
+    <div class="dashboard-stack">
+        <section class="dashboard-card">
+            <h3>Vorhandene Länder</h3>
+            <p>Kompakte Liste mit Suchfunktion und Scrollbereich.</p>
+
+            <div class="search-box">
+                <label for="countrySearch">Suche</label>
+                <input type="text"
+                       id="countrySearch"
+                       placeholder="Nach Land oder ISO-Code suchen..."
+                       onkeyup="filterCountries()" />
+            </div>
+
+            <div class="table-scroll">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>Country</th>
+                        <th>ISO-Code</th>
+                        <th>Created At</th>
+                        <th>Created By User</th>
+                        <th>Bearbeiten</th>
+                    </tr>
+                    </thead>
+                    <tbody id="countryTableBody">
+                    <tr th:each="row : ${countryRows}"
+                        th:attr="data-search=${#strings.toLowerCase(row.country + ' ' + row.isoCode)}">
+                        <td th:text="${row.country}">Deutschland</td>
+                        <td th:text="${row.isoCode}">DE</td>
+                        <td>
+                            <span th:if="${row.createdAt != null}"
+                                  th:text="${#temporals.format(row.createdAt, 'dd.MM.yyyy HH:mm')}">27.08.2026 11:30</span>
+                            <span th:if="${row.createdAt == null}" class="muted-text">-</span>
+                        </td>
+                        <td th:text="${row.createdByUser}">scientist1</td>
+                        <td>
+                            <a class="icon-button"
+                               th:href="@{/scientist/dashboard(editId=${row.countryId})} + '#edit-section'"
+                               title="Land bearbeiten">✏</a>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="edit-section" class="dashboard-card" th:if="${editMode}">
+            <h3>Land bearbeiten</h3>
+            <form th:action="@{/scientist/dashboard/save}"
+                  th:object="${countryEditForm}"
+                  method="post">
+
+                <input type="hidden" th:field="*{countryId}" />
+
+                <div class="records-section">
+                    <h4>Vorhandene Datensätze</h4>
+
+                    <div class="field-error"
+                         th:if="${#fields.hasErrors('existingRecords')}"
+                         th:errors="*{existingRecords}">
+                    </div>
+
+                    <div class="table-scroll" th:if="${not #lists.isEmpty(countryEditForm.existingRecords)}">
+                        <table>
+                            <thead>
+                            <tr>
+                                <th>Country</th>
+                                <th>Reporting Year</th>
+                                <th>Emission Value (kt)</th>
+                                <th>Source</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="record, stat : *{existingRecords}">
+                                <td>
+                                    <input type="hidden" th:field="*{existingRecords[__${stat.index}__].recordId}" />
+                                    <input type="hidden" th:field="*{existingRecords[__${stat.index}__].countryId}" />
+                                    <input type="text"
+                                           th:field="*{existingRecords[__${stat.index}__].country}" />
+                                </td>
+                                <td>
+                                    <input type="number"
+                                           th:field="*{existingRecords[__${stat.index}__].reportingYear}" />
+                                </td>
+                                <td>
+                                    <input type="number"
+                                           step="0.01"
+                                           th:field="*{existingRecords[__${stat.index}__].emissionValue}" />
+                                </td>
+                                <td>
+                                    <input type="text"
+                                           th:field="*{existingRecords[__${stat.index}__].source}" />
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div th:if="${#lists.isEmpty(countryEditForm.existingRecords)}" class="empty-state">
+                        Für dieses Land sind noch keine vorhandenen Datensätze gespeichert.
+                    </div>
+                </div>
+
+                <div class="records-section">
+                    <h4>Neuen Datensatz hinzufügen</h4>
+
+                    <div class="table-scroll">
+                        <table>
+                            <thead>
+                            <tr>
+                                <th>Reporting Year</th>
+                                <th>Emission Value (kt)</th>
+                                <th>Source</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr>
+                                <td>
+                                    <input type="number" th:field="*{newRecord.reportingYear}" />
+                                    <div class="field-error"
+                                         th:if="${#fields.hasErrors('newRecord.reportingYear')}"
+                                         th:errors="*{newRecord.reportingYear}"></div>
+                                </td>
+                                <td>
+                                    <input type="number" step="0.01" th:field="*{newRecord.emissionValue}" />
+                                    <div class="field-error"
+                                         th:if="${#fields.hasErrors('newRecord.emissionValue')}"
+                                         th:errors="*{newRecord.emissionValue}"></div>
+                                </td>
+                                <td>
+                                    <input type="text" th:field="*{newRecord.source}" />
+                                    <div class="field-error"
+                                         th:if="${#fields.hasErrors('newRecord.source')}"
+                                         th:errors="*{newRecord.source}"></div>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="primary-button">Save</button>
+
+                    <button type="submit"
+                            class="secondary-button"
+                            formaction="/scientist/dashboard/add-record">
+                        Hinzufügen
+                    </button>
+
+                    <a th:href="@{/scientist/dashboard/cancel}" class="secondary-button">Schließen</a>
+                </div>
+            </form>
+        </section>
+    </div>
+</main>
+
+<footer>
+    <div class="footer-container">
+        <p><strong>Fake Impressum</strong></p>
+        <p>Like Hero To Zero GmbH, Musterstraße 12, 80331 München</p>
+        <p>E-Mail: info@likeherotozero.de | Telefon: +49 89 123456</p>
+    </div>
+</footer>
+
+<script>
+    function filterCountries() {
+        const input = document.getElementById("countrySearch");
+        const filter = input.value.toLowerCase();
+        const rows = document.querySelectorAll("#countryTableBody tr");
+
+        rows.forEach(row => {
+            const searchableText = row.getAttribute("data-search") || "";
+            row.style.display = searchableText.includes(filter) ? "" : "none";
+        });
+    }
+</script>
+
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    const scrollToEdit = /*[[${scrollToEdit}]]*/ false;
+
+    if (scrollToEdit) {
+        window.addEventListener('load', function () {
+            const editSection = document.getElementById('edit-section');
+            if (editSection) {
+                editSection.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }
+        });
+    }
+    /*]]>*/
+</script>
+
+
+</body>
+</html>
