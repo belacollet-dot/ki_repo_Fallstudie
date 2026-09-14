@@ -22,23 +22,18 @@ public class CustomUserDetailsService implements UserDetailsService {
     }
 
     @Override
-    public UserDetails loadUserByUsername(String usernameOrEmail)
-            throws UsernameNotFoundException {
+    public UserDetails loadUserByUsername(String usernameOrEmail) throws UsernameNotFoundException {
+        ScientistUser user = userRepository.findByUsername(usernameOrEmail)
+            .or(() -> userRepository.findByEmail(usernameOrEmail))
+            .orElseThrow(() -> new UsernameNotFoundException("Benutzer nicht gefunden: " + usernameOrEmail));
 
-        ScientistUser scientistUser = userRepository.findByUsername(usernameOrEmail)
-                .or(() -> userRepository.findByEmail(usernameOrEmail))
-                .orElseThrow(() ->
-                        new UsernameNotFoundException(
-                                "Benutzer nicht gefunden: " + usernameOrEmail));
-
-        GrantedAuthority authority =
-                new SimpleGrantedAuthority("ROLE_" + scientistUser.getRole().name());
+        GrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + user.getRole().name());
 
         return User.builder()
-                .username(scientistUser.getUsername())
-                .password(scientistUser.getPasswordHash())
-                .authorities(Collections.singletonList(authority))
-                .disabled(!scientistUser.isEnabled())
-                .build();
+            .username(user.getUsername())
+            .password(user.getPasswordHash())
+            .authorities(Collections.singletonList(authority))
+            .disabled(!user.isEnabled())
+            .build();
     }
 }

@@ -31,9 +31,8 @@ public class PublicEmissionController {
                                   @RequestParam(required = false) Double max,
                                   @RequestParam(defaultValue = "year") String sortBy,
                                   @RequestParam(defaultValue = "false") boolean ascending) {
+        
         List<Co2EmissionRecord> emissions = emissionService.filterEmissions(countryId, year, min, max);
-
-        // Sortieren
         emissions = sortEmissions(emissions, sortBy, ascending);
 
         model.addAttribute("emissions", emissions);

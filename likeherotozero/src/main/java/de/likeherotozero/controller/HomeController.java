@@ -32,15 +32,17 @@ public class HomeController {
                        @RequestParam(required = false) String search,
                        @RequestParam(defaultValue = "name") String sortBy,
                        @RequestParam(defaultValue = "true") boolean ascending) {
+        
         List<Country> countries = countryService.searchCountries(search);
 
-        // Statistiken berechnen
+        // Länder mit Statistiken für das Dashboard
         List<CountryDashboardRow> rows = countries.stream()
             .map(country -> {
                 List<Co2EmissionRecord> records = emissionService.getEmissionsByCountry(country.getId());
                 return new CountryDashboardRow(
                     country.getId(),
                     country.getName(),
+                    country.getIsoCode(),
                     country.getContinent(),
                     emissionService.calculateAverage(records),
                     emissionService.calculateMin(records),
@@ -64,6 +66,7 @@ public class HomeController {
                                 @RequestParam(required = false) Integer year,
                                 @RequestParam(defaultValue = "year") String sortBy,
                                 @RequestParam(defaultValue = "false") boolean ascending) {
+        
         Country country = countryService.getCountryById(id);
         List<Co2EmissionRecord> records = emissionService.getEmissionsByCountry(id);
 
@@ -73,9 +76,6 @@ public class HomeController {
                 .filter(r -> r.getYear().equals(year))
                 .collect(Collectors.toList());
         }
-
-        // Sortieren
-        records = sortEmissions(records, sortBy, ascending);
 
         // Verfügbare Jahre für Dropdown
         @SuppressWarnings("null")
@@ -89,8 +89,6 @@ public class HomeController {
         model.addAttribute("emissions", records);
         model.addAttribute("availableYears", availableYears);
         model.addAttribute("selectedYear", year);
-        model.addAttribute("sortBy", sortBy);
-        model.addAttribute("ascending", ascending);
 
         return "country-detail";
     }
@@ -112,30 +110,18 @@ public class HomeController {
             case "minEmission" -> Comparator.comparingDouble(CountryDashboardRow::minEmission);
             case "maxEmission" -> Comparator.comparingDouble(CountryDashboardRow::maxEmission);
             case "recordCount" -> Comparator.comparingInt(CountryDashboardRow::recordCount);
+            case "isoCode" -> Comparator.comparing(r -> r.isoCode() != null ? r.isoCode() : "", String.CASE_INSENSITIVE_ORDER);
             default -> Comparator.comparing(CountryDashboardRow::name, String.CASE_INSENSITIVE_ORDER);
         };
 
         return ascending ? comparator : comparator.reversed();
     }
 
-    private List<Co2EmissionRecord> sortEmissions(List<Co2EmissionRecord> records, String sortBy, boolean ascending) {
-        @SuppressWarnings("null")
-        Comparator<Co2EmissionRecord> comparator = switch (sortBy) {
-            case "co2Value" -> Comparator.comparing(Co2EmissionRecord::getCo2Value);
-            default -> Comparator.comparing(Co2EmissionRecord::getYear);
-        };
-
-        if (!ascending) {
-            comparator = comparator.reversed();
-        }
-
-        return records.stream().sorted(comparator).collect(Collectors.toList());
-    }
-
     // Record-Klasse für Dashboard-Anzeige
     public record CountryDashboardRow(
         Long id,
         String name,
+        String isoCode,
         String continent,
         double avgEmission,
         double minEmission,

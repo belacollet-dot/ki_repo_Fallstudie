@@ -38,29 +38,37 @@ public class ScientistUserService {
             .orElseThrow(() -> new EntityNotFoundException("Benutzer nicht gefunden mit E-Mail: " + email));
     }
 
-    public ScientistUser createUser(String name, String email, String password, UserRole role) {
+    public ScientistUser createUser(String username, String email, String password, String name, UserRole role) {
+        if (userRepository.findByUsername(username).isPresent()) {
+            throw new IllegalArgumentException("Benutzername existiert bereits: " + username);
+        }
         if (userRepository.findByEmail(email).isPresent()) {
             throw new IllegalArgumentException("E-Mail existiert bereits: " + email);
         }
 
         ScientistUser user = new ScientistUser();
-        user.setName(name);
+        user.setUsername(username);
         user.setEmail(email);
+        user.setName(name);
         user.setPasswordHash(passwordEncoder.encode(password));
         user.setRole(role != null ? role : UserRole.SCIENTIST);
+        user.setEnabled(true);
 
         return userRepository.save(user);
     }
 
     @SuppressWarnings("null")
-    public ScientistUser updateUser(Long id, String name, String email, UserRole role) {
+    public ScientistUser updateUser(Long id, String username, String email, String name, UserRole role) {
         ScientistUser user = getUserById(id);
 
-        if (name != null && !name.trim().isEmpty()) {
-            user.setName(name);
+        if (username != null && !username.trim().isEmpty()) {
+            user.setUsername(username);
         }
         if (email != null && !email.trim().isEmpty()) {
             user.setEmail(email);
+        }
+        if (name != null && !name.trim().isEmpty()) {
+            user.setName(name);
         }
         if (role != null) {
             user.setRole(role);
@@ -80,6 +88,10 @@ public class ScientistUserService {
     }
 
     public boolean emailExists(String email) {
-        return userRepository.findByEmail(email).isPresent();
+        return userRepository.existsByEmail(email);
+    }
+
+    public boolean usernameExists(String username) {
+        return userRepository.findByUsername(username).isPresent();
     }
 }

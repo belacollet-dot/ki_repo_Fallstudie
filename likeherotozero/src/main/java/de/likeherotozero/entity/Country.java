@@ -11,8 +11,12 @@ public class Country {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotBlank(message = "ISO-Code ist erforderlich")
+    @Column(name = "isocode", nullable = false, unique = true)
+    private String isoCode;
+
     @NotBlank(message = "Ländername ist erforderlich")
-    @Column(unique = true, nullable = false)
+    @Column(nullable = false)
     private String name;
 
     private String code;
@@ -20,15 +24,17 @@ public class Country {
     private String continent;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "edited_by_id")
+    @JoinColumn(name = "editedbyid")
     private ScientistUser editedBy;
 
-    // Standard-Konstruktor
     public Country() {}
 
     // Getter und Setter
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
+
+    public String getIsoCode() { return isoCode; }
+    public void setIsoCode(String isoCode) { this.isoCode = isoCode; }
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }

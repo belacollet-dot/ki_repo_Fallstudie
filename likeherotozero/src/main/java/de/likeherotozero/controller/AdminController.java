@@ -4,16 +4,13 @@ import de.likeherotozero.entity.Co2EmissionRecord;
 import de.likeherotozero.entity.Country;
 import de.likeherotozero.entity.ScientistUser;
 import de.likeherotozero.entity.UserRole;
-import de.likeherotozero.form.CountryForm;
 import de.likeherotozero.service.Co2EmissionService;
 import de.likeherotozero.service.CountryService;
 import de.likeherotozero.service.ScientistUserService;
-import jakarta.validation.Valid;
 
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -62,14 +59,16 @@ public class AdminController {
     @PostMapping("/scientist/new")
     public String createScientist(@ModelAttribute("scientist") ScientistUser user,
                                   @RequestParam String password,
+                                  @RequestParam String username,
+                                  @RequestParam String name,
                                   Model model) {
-        if (userService.emailExists(user.getEmail())) {
-            model.addAttribute("error", "E-Mail existiert bereits");
+        if (userService.usernameExists(username)) {
+            model.addAttribute("error", "Benutzername existiert bereits");
             model.addAttribute("roles", UserRole.values());
             return "AdminScientistForm";
         }
 
-        userService.createUser(user.getName(), user.getEmail(), password, user.getRole());
+        userService.createUser(username, user.getEmail(), password, name, user.getRole());
         return "redirect:/admin/dashboard";
     }
 
@@ -85,7 +84,7 @@ public class AdminController {
     public String updateScientist(@PathVariable @NonNull Long id,
                                   @ModelAttribute("scientist") ScientistUser user,
                                   @RequestParam(required = false) String password) {
-        userService.updateUser(id, user.getName(), user.getEmail(), user.getRole());
+        userService.updateUser(id, user.getUsername(), user.getEmail(), user.getName(), user.getRole());
 
         if (password != null && !password.trim().isEmpty()) {
             userService.updateUserPassword(id, password);
@@ -110,22 +109,12 @@ public class AdminController {
 
     @GetMapping("/country/new")
     public String newCountryForm(Model model) {
-        model.addAttribute("countryForm", new CountryForm());
+        model.addAttribute("country", new Country());
         return "AdminCountryForm";
     }
 
     @PostMapping("/country/new")
-    public String createCountry(@Valid @ModelAttribute("countryForm") CountryForm form,
-                                BindingResult result) {
-        if (result.hasErrors()) {
-            return "AdminCountryForm";
-        }
-
-        Country country = new Country();
-        country.setName(form.getName());
-        country.setCode(form.getCode());
-        country.setContinent(form.getContinent());
-
+    public String createCountry(@ModelAttribute("country") @NonNull Country country) {
         countryService.saveCountry(country);
         return "redirect:/admin/countries";
     }
@@ -133,30 +122,18 @@ public class AdminController {
     @GetMapping("/country/edit/{id}")
     public String editCountryForm(@PathVariable @NonNull Long id, Model model) {
         Country country = countryService.getCountryById(id);
-        CountryForm form = new CountryForm();
-        form.setId(country.getId());
-        form.setName(country.getName());
-        form.setCode(country.getCode());
-        form.setContinent(country.getContinent());
-
-        model.addAttribute("countryForm", form);
+        model.addAttribute("country", country);
         return "AdminCountryForm";
     }
 
     @PostMapping("/country/edit/{id}")
-    public String updateCountry(@PathVariable @NonNull Long id,
-                                @Valid @ModelAttribute("countryForm") CountryForm form,
-                                BindingResult result) {
-        if (result.hasErrors()) {
-            return "AdminCountryForm";
-        }
-
-        Country country = countryService.getCountryById(id);
-        country.setName(form.getName());
-        country.setCode(form.getCode());
-        country.setContinent(form.getContinent());
-
-        countryService.saveCountry(country);
+    public String updateCountry(@PathVariable @NonNull Long id, @ModelAttribute("country") Country country) {
+        Country existing = countryService.getCountryById(id);
+        existing.setName(country.getName());
+        existing.setIsoCode(country.getIsoCode());
+        existing.setCode(country.getCode());
+        existing.setContinent(country.getContinent());
+        countryService.saveCountry(existing);
         return "redirect:/admin/countries";
     }
 

@@ -31,6 +31,7 @@ public class CountryService {
         if (query == null || query.trim().isEmpty()) {
             return getAllCountries();
         }
+        // Suche nach Ländername (case-insensitive)
         return countryRepository.findAllByNameContainingIgnoreCase(query.trim());
     }
 
@@ -53,6 +54,7 @@ public class CountryService {
         @SuppressWarnings("null")
         Comparator<Country> comparator = switch (sortBy) {
             case "name" -> Comparator.comparing(Country::getName, String.CASE_INSENSITIVE_ORDER);
+            case "isoCode" -> Comparator.comparing(c -> c.getIsoCode() != null ? c.getIsoCode() : "", String.CASE_INSENSITIVE_ORDER);
             case "continent" -> Comparator.comparing(c -> c.getContinent() != null ? c.getContinent() : "", String.CASE_INSENSITIVE_ORDER);
             default -> Comparator.comparing(Country::getName, String.CASE_INSENSITIVE_ORDER);
         };
