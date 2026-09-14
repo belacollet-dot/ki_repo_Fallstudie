@@ -96,13 +96,15 @@ public class ScientistDashboardController {
     @PostMapping("/emission/new")
     public String createEmission(@Valid @ModelAttribute("emissionForm") CreateEmissionForm form,
                                  BindingResult result,
-                                 @AuthenticationPrincipal User currentUser) {
+                                 @AuthenticationPrincipal User currentUser,
+                                 Model model) {
         if (result.hasErrors()) {
             model.addAttribute("countries", countryService.getAllCountries());
             return "ScientistEmissionForm";
         }
 
         ScientistUser scientist = userService.getUserByEmail(currentUser.getUsername());
+        @SuppressWarnings("null")
         Country country = countryService.getCountryById(form.getCountryId());
 
         Co2EmissionRecord record = new Co2EmissionRecord();
@@ -116,7 +118,7 @@ public class ScientistDashboardController {
     }
 
     @GetMapping("/emission/edit/{id}")
-    public String editEmissionForm(@PathVariable Long id, Model model,
+    public String editEmissionForm(@PathVariable @NonNull Long id, Model model,
                                    @AuthenticationPrincipal User currentUser) {
         Co2EmissionRecord record = emissionService.getEmissionById(id);
         ScientistUser scientist = userService.getUserByEmail(currentUser.getUsername());
@@ -139,10 +141,11 @@ public class ScientistDashboardController {
     }
 
     @PostMapping("/emission/edit/{id}")
-    public String updateEmission(@PathVariable Long id,
+    public String updateEmission(@PathVariable @NonNull Long id,
                                  @Valid @ModelAttribute("emissionForm") CreateEmissionForm form,
                                  BindingResult result,
-                                 @AuthenticationPrincipal User currentUser) {
+                                 @AuthenticationPrincipal User currentUser,
+                                 Model model) {
         if (result.hasErrors()) {
             model.addAttribute("countries", countryService.getAllCountries());
             return "ScientistEmissionForm";
@@ -156,6 +159,7 @@ public class ScientistDashboardController {
             return "redirect:/scientist/my-emissions?error=permission";
         }
 
+        @SuppressWarnings("null")
         Country country = countryService.getCountryById(form.getCountryId());
         record.setCountry(country);
         record.setYear(form.getYear());
