@@ -2,10 +2,6 @@ package de.likeherotozero.entity;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
-
-import java.util.ArrayList;
-import java.util.List;
 
 @Entity
 @Table(name = "country")
@@ -15,47 +11,34 @@ public class Country {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @NotBlank
-    @Size(max = 100)
-    @Column(name = "name", nullable = false, length = 100)
+    @NotBlank(message = "Ländername ist erforderlich")
+    @Column(unique = true, nullable = false)
     private String name;
 
-    @NotBlank
-    @Size(min = 2, max = 10)
-    @Column(name = "iso_code", nullable = false, unique = true, length = 10)
-    private String isoCode;
+    private String code;
 
-    @OneToMany(mappedBy = "country", cascade = CascadeType.ALL, orphanRemoval = false)
-    private List<Co2EmissionRecord> emissionRecords = new ArrayList<>();
+    private String continent;
 
-    public Country() {
-    }
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "edited_by_id")
+    private ScientistUser editedBy;
 
-    public Long getId() {
-        return id;
-    }
+    // Standard-Konstruktor
+    public Country() {}
 
-    public String getName() {
-        return name;
-    }
+    // Getter und Setter
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
 
-    public void setName(String name) {
-        this.name = name;
-    }
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
 
-    public String getIsoCode() {
-        return isoCode;
-    }
+    public String getCode() { return code; }
+    public void setCode(String code) { this.code = code; }
 
-    public void setIsoCode(String isoCode) {
-        this.isoCode = isoCode;
-    }
+    public String getContinent() { return continent; }
+    public void setContinent(String continent) { this.continent = continent; }
 
-    public List<Co2EmissionRecord> getEmissionRecords() {
-        return emissionRecords;
-    }
-
-    public void setEmissionRecords(List<Co2EmissionRecord> emissionRecords) {
-        this.emissionRecords = emissionRecords;
-    }
+    public ScientistUser getEditedBy() { return editedBy; }
+    public void setEditedBy(ScientistUser editedBy) { this.editedBy = editedBy; }
 }

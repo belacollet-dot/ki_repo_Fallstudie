@@ -1,11 +1,9 @@
 package de.likeherotozero.entity;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.*;
-import org.hibernate.annotations.CreationTimestamp;
-
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
 
 @Entity
 @Table(name = "co2_emission_record")
@@ -15,109 +13,41 @@ public class Co2EmissionRecord {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @NotNull
+    @NotNull(message = "Jahr ist erforderlich")
+    @Min(value = 1900, message = "Jahr muss nach 1900 sein")
+    @Max(value = 2100, message = "Jahr muss vor 2100 sein")
+    private Integer year;
+
+    @NotNull(message = "CO₂-Wert ist erforderlich")
+    @Min(value = 0, message = "CO₂-Wert muss positiv sein")
+    @Max(value = 1000, message = "CO₂-Wert darf maximal 1000 sein")
+    @Column(name = "co2_value", nullable = false)
+    private Double co2Value;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "country_id", nullable = false)
     private Country country;
 
-    @NotNull
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "created_by_user_id", nullable = false)
-    private ScientistUser createdByUser;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "scientist_id")
+    private ScientistUser scientist;
 
-    @NotNull
-    @Min(1900)
-    @Max(2100)
-    @Column(name = "reporting_year", nullable = false)
-    private Integer reportingYear;
+    // Standard-Konstruktor
+    public Co2EmissionRecord() {}
 
-    @NotNull
-    @DecimalMin(value = "0.0", inclusive = true)
-    @Column(name = "emission_value", nullable = false, precision = 15, scale = 2)
-    private BigDecimal emissionValue;
+    // Getter und Setter
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
 
-    @NotBlank
-    @Size(max = 20)
-    @Column(name = "unit", nullable = false, length = 20)
-    private String unit;
+    public Integer getYear() { return year; }
+    public void setYear(Integer year) { this.year = year; }
 
-    @NotBlank
-    @Size(max = 255)
-    @Column(name = "source", nullable = false, length = 255)
-    private String source;
+    public Double getCo2Value() { return co2Value; }
+    public void setCo2Value(Double co2Value) { this.co2Value = co2Value; }
 
-    @Size(max = 1000)
-    @Column(name = "comment", length = 1000)
-    private String comment;
+    public Country getCountry() { return country; }
+    public void setCountry(Country country) { this.country = country; }
 
-    @CreationTimestamp
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-
-    public Co2EmissionRecord() {
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public Country getCountry() {
-        return country;
-    }
-
-    public void setCountry(Country country) {
-        this.country = country;
-    }
-
-    public ScientistUser getCreatedByUser() {
-        return createdByUser;
-    }
-
-    public void setCreatedByUser(ScientistUser createdByUser) {
-        this.createdByUser = createdByUser;
-    }
-
-    public Integer getReportingYear() {
-        return reportingYear;
-    }
-
-    public void setReportingYear(Integer reportingYear) {
-        this.reportingYear = reportingYear;
-    }
-
-    public BigDecimal getEmissionValue() {
-        return emissionValue;
-    }
-
-    public void setEmissionValue(BigDecimal emissionValue) {
-        this.emissionValue = emissionValue;
-    }
-
-    public String getUnit() {
-        return unit;
-    }
-
-    public void setUnit(String unit) {
-        this.unit = unit;
-    }
-
-    public String getSource() {
-        return source;
-    }
-
-    public void setSource(String source) {
-        this.source = source;
-    }
-
-    public String getComment() {
-        return comment;
-    }
-
-    public void setComment(String comment) {
-        this.comment = comment;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
+    public ScientistUser getScientist() { return scientist; }
+    public void setScientist(ScientistUser scientist) { this.scientist = scientist; }
 }

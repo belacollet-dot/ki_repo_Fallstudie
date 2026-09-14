@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${country.name} + ' - Details'">Land Details</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; line-height: 1.6; background: #f4f4f4; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header { background: #2c3e50; color: white; padding: 1rem 0; margin-bottom: 2rem; }
+        header .container { display: flex; justify-content: space-between; align-items: center; }
+        nav a { color: white; text-decoration: none; margin-left: 1rem; }
+        .back-btn { display: inline-block; margin-bottom: 1rem; padding: 0.5rem 1rem; background: #95a5a6; color: white; text-decoration: none; border-radius: 4px; }
+        .filter-box { background: white; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .filter-box form { display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; }
+        .filter-box select { padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; }
+        .filter-box button { padding: 0.5rem 1rem; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        th, td { padding: 1rem; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background: #34495e; color: white; }
+        tr:hover { background: #f5f5f5; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>LikeHeroToZero</h1>
+            <nav>
+                <a href="/">Startseite</a>
+                <a href="/emissions">Emissionssuche</a>
+                <a href="/login">Login</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <a href="/" class="back-btn">← Zurück zur Übersicht</a>
+
+        <h2 th:text="${country.name}">Land</h2>
+        <p>
+            <strong>Kontinent:</strong> <span th:text="${country.continent}">-</span><br>
+            <strong>Code:</strong> <span th:text="${country.code}">-</span>
+        </p>
+
+        <div class="filter-box">
+            <form th:action="@{/country/{id}(id=${country.id})}" method="get">
+                <label for="year">Jahr filtern:</label>
+                <select name="year" id="year">
+                    <option value="">Alle Jahre</option>
+                    <option th:each="y : ${availableYears}" th:value="${y}" th:text="${y}" th:selected="${y == selectedYear}">Jahr</option>
+                </select>
+                <button type="submit">Filtern</button>
+            </form>
+        </div>
+
+        <h3>Emissionsdaten</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Jahr</th>
+                    <th>CO₂-Wert</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="emission : ${emissions}">
+                    <td th:text="${emission.year}">Jahr</td>
+                    <td th:text="${#numbers.formatDecimal(emission.co2Value, 1, 2)}">0.00</td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(emissions)}">
+                    <td colspan="2" style="text-align: center;">Keine Emissionsdaten gefunden</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

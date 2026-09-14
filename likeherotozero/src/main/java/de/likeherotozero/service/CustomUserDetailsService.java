@@ -9,27 +9,26 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
+import java.util.Collections;
 
 @Service
 public class CustomUserDetailsService implements UserDetailsService {
 
-    private final ScientistUserRepository scientistUserRepository;
+    private final ScientistUserRepository userRepository;
 
-    public CustomUserDetailsService(ScientistUserRepository scientistUserRepository) {
-        this.scientistUserRepository = scientistUserRepository;
+    public CustomUserDetailsService(ScientistUserRepository userRepository) {
+        this.userRepository = userRepository;
     }
 
     @Override
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        ScientistUser scientistUser = scientistUserRepository.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("Benutzer nicht gefunden: " + username));
+    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+        ScientistUser user = userRepository.findByEmail(email)
+            .orElseThrow(() -> new UsernameNotFoundException("Benutzer nicht gefunden: " + email));
 
-        return User.builder()
-                .username(scientistUser.getUsername())
-                .password(scientistUser.getPasswordHash())
-                .authorities(List.of(new SimpleGrantedAuthority("ROLE_" + scientistUser.getRole().name())))
-                .disabled(!scientistUser.getEnabled())
-                .build();
+        return new User(
+            user.getEmail(),
+            user.getPassword(),
+            Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()))
+        );
     }
 }

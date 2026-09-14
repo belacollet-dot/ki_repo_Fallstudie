@@ -9,6 +9,4 @@ public class LikeherotozeroApplication {
     public static void main(String[] args) {
         SpringApplication.run(LikeherotozeroApplication.class, args);
     }
-
-    
 }

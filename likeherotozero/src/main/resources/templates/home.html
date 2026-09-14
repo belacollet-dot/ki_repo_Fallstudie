@@ -1,543 +1,92 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="de">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Like Hero To Zero</title>
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LikeHeroToZero - CO₂ Emissionen</title>
     <style>
-        * {
-            box-sizing: border-box;
-        }
-
-        body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-            background-color: #f4f7fb;
-            color: #1f2937;
-        }
-
-        header {
-            background-color: #ffffff;
-            border-bottom: 1px solid #dbe3ea;
-            padding: 16px 32px;
-        }
-
-        .header-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 16px;
-        }
-
-        .brand-area {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }
-
-        .logo-box {
-            width: 70px;
-            height: 70px;
-            border: 1px dashed #9ca3af;
-            background-color: #f9fafb;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-        }
-
-        .logo-box img {
-            max-width: 100%;
-            max-height: 100%;
-            display: block;
-        }
-
-        .brand-text h1 {
-            margin: 0;
-            font-size: 28px;
-            color: #0f172a;
-        }
-
-        .brand-text p {
-            margin: 6px 0 0 0;
-            color: #475569;
-        }
-
-        .login-button {
-            display: inline-block;
-            padding: 10px 18px;
-            background-color: #0f766e;
-            color: #ffffff;
-            text-decoration: none;
-            border-radius: 6px;
-            font-weight: bold;
-        }
-
-        .login-button:hover {
-            background-color: #115e59;
-        }
-
-        main {
-            max-width: 1200px;
-            margin: 32px auto;
-            padding: 0 32px;
-        }
-
-        .intro {
-            background-color: #ffffff;
-            padding: 24px;
-            border-radius: 10px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-            margin-bottom: 24px;
-        }
-
-        .intro h2 {
-            margin-top: 0;
-            color: #0f172a;
-        }
-
-        .table-section {
-            background-color: #ffffff;
-            padding: 24px;
-            border-radius: 10px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-            overflow-x: auto;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        thead {
-            background-color: #e2e8f0;
-        }
-
-        th, td {
-            text-align: left;
-            padding: 12px 14px;
-            border-bottom: 1px solid #e5e7eb;
-        }
-
-        th {
-            color: #0f172a;
-        }
-
-        tbody tr:hover {
-            background-color: #f8fafc;
-        }
-
-        .no-data {
-            padding: 16px;
-            background-color: #fff7ed;
-            border: 1px solid #fdba74;
-            border-radius: 8px;
-            color: #9a3412;
-        }
-
-        footer {
-            margin-top: 40px;
-            background-color: #0f172a;
-            color: #ffffff;
-            padding: 24px 32px;
-        }
-
-        .footer-container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        .footer-container p {
-            margin: 6px 0;
-        }
-
-        @media (max-width: 768px) {
-            .header-container {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-
-            main {
-                padding: 0 16px;
-            }
-
-            header, footer {
-                padding-left: 16px;
-                padding-right: 16px;
-            }
-        }
-
-            .selection-section {
-        background-color: #ffffff;
-        padding: 24px;
-        border-radius: 10px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-        margin-bottom: 24px;
-    }
-
-    .selection-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        gap: 16px;
-        margin-bottom: 20px;
-        flex-wrap: wrap;
-    }
-
-    .selection-header h2 {
-        margin: 0;
-        color: #0f172a;
-    }
-
-    .search-box {
-        display: flex;
-        flex-direction: column;
-        min-width: 220px;
-    }
-
-    .search-box label {
-        margin-bottom: 6px;
-        font-weight: bold;
-    }
-
-    .search-box input {
-        padding: 10px 12px;
-        border: 1px solid #cbd5e1;
-        border-radius: 6px;
-        font-size: 15px;
-    }
-
-    .country-grid {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(180px, 1fr));
-        gap: 12px 20px;
-        border: 2px solid #0f172a;
-        padding: 16px;
-        border-radius: 8px;
-        background-color: #f8fafc;
-        max-height: 190px;
-        overflow-y: auto;
-        overflow-x: hidden;
-    }
-
-    .country-item {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 10px 12px;
-        border: 1px solid #cbd5e1;
-        border-radius: 6px;
-        background-color: #ffffff;
-        cursor: pointer;
-    }
-
-    .country-item:hover {
-        background-color: #eef6f6;
-    }
-
-    .country-item input[type="checkbox"] {
-        width: 18px;
-        height: 18px;
-        accent-color: #0f766e;
-    }
-
-    .selection-actions {
-        margin-top: 18px;
-    }
-
-    .primary-button {
-        padding: 10px 18px;
-        background-color: #0f766e;
-        color: #ffffff;
-        border: none;
-        border-radius: 6px;
-        font-weight: bold;
-        cursor: pointer;
-    }
-
-    .primary-button:hover {
-        background-color: #115e59;
-    }
-
-    .chart-section {
-        background-color: #ffffff;
-        padding: 24px;
-        border-radius: 10px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-    }
-
-    .chart-section h2 {
-        margin-top: 0;
-    }
-
-    .chart-placeholder {
-        margin-top: 16px;
-        min-height: 360px;
-        border: 3px solid #111827;
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 24px;
-        color: #374151;
-        background-color: #f8fafc;
-    }
-    .selection-info {
-        margin-top: 6px;
-        margin-bottom: 0;
-        color: #475569;
-    }
-
-    .country-name {
-        display: block;
-        font-weight: bold;
-        color: #0f172a;
-    }
-
-    .country-meta {
-        display: block;
-        margin-top: 4px;
-        font-size: 13px;
-        color: #64748b;
-    }
-
-    .selection-result {
-        margin-top: 20px;
-        padding: 16px;
-        border-radius: 8px;
-        background-color: #f8fafc;
-        border: 1px solid #cbd5e1;
-    }
-
-    .selection-result p {
-        margin-top: 0;
-        margin-bottom: 12px;
-    }
-
-    .selection-note {
-        color: #92400e;
-        background-color: #fff7ed;
-        border: 1px solid #fdba74;
-        padding: 10px 12px;
-        border-radius: 6px;
-    }
-
-    .selected-country-list {
-        margin: 0;
-        padding-left: 18px;
-        color: #1e293b;
-    }
-
-    .selected-country-list li {
-        margin-bottom: 6px;
-    }
-
-        .chart-container {
-        margin-top: 16px;
-        min-height: 420px;
-        padding: 20px;
-        border: 3px solid #111827;
-        border-radius: 8px;
-        background-color: #f8fafc;
-    }
-
-    .chart-placeholder {
-        margin-top: 16px;
-        min-height: 360px;
-        border: 3px solid #111827;
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 24px;
-        color: #374151;
-        background-color: #f8fafc;
-    }
-
-    @media (max-width: 900px) {
-        .country-grid {
-            grid-template-columns: repeat(2, minmax(160px, 1fr));
-        }
-    }
-
-    @media (max-width: 600px) {
-        .country-grid {
-            grid-template-columns: 1fr;
-        }
-
-        .search-box {
-            width: 100%;
-        }
-    }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; line-height: 1.6; background: #f4f4f4; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header { background: #2c3e50; color: white; padding: 1rem 0; margin-bottom: 2rem; }
+        header .container { display: flex; justify-content: space-between; align-items: center; }
+        header h1 { font-size: 1.5rem; }
+        nav a { color: white; text-decoration: none; margin-left: 1rem; }
+        nav a:hover { text-decoration: underline; }
+        .search-box { background: white; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .search-box form { display: flex; gap: 1rem; flex-wrap: wrap; }
+        .search-box input[type="text"] { flex: 1; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; }
+        .search-box button { padding: 0.5rem 1rem; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .search-box button:hover { background: #2980b9; }
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        th, td { padding: 1rem; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background: #34495e; color: white; }
+        tr:hover { background: #f5f5f5; }
+        th a { color: white; text-decoration: none; }
+        th a:hover { text-decoration: underline; }
+        .btn { display: inline-block; padding: 0.5rem 1rem; background: #3498db; color: white; text-decoration: none; border-radius: 4px; }
+        .btn:hover { background: #2980b9; }
+        footer { margin-top: 3rem; padding: 1rem 0; background: #2c3e50; color: white; text-align: center; }
     </style>
 </head>
 <body>
-
-<header>
-    <div class="header-container">
-        <div class="brand-area">
-            <div class="logo-box">
-                <img th:src="@{/images/logo.png}" alt="Logo Like Hero To Zero" />
-            </div>
-
-            <div class="brand-text">
-                <h1>Like Hero To Zero</h1>
-                <p>Öffentliche Übersicht über Länder- und CO2-Daten.</p>
-            </div>
+    <header>
+        <div class="container">
+            <h1>LikeHeroToZero</h1>
+            <nav>
+                <a href="/">Startseite</a>
+                <a href="/emissions">Emissionssuche</a>
+                <a href="/about">Über</a>
+                <a href="/login">Login</a>
+            </nav>
         </div>
+    </header>
 
-        <a class="login-button" th:href="@{/login}">Login</a>
-    </div>
-</header>
-
-<main>
-    <section class="intro">
-        <h2>Willkommen</h2>
-        <p>
-            Auf dieser Startseite werden die vorhandenen Länderdaten übersichtlich dargestellt.
-            Später kann die Tabelle zusätzlich um die neuesten CO2-Emissionswerte pro Land erweitert werden.
-        </p>
-    </section>
-
-  <section class="selection-section">
-    <div class="selection-header">
-        <div>
-            <h2>Länderauswahl</h2>
-            <p class="selection-info">
-                Wähle die Länder aus, die später im Diagramm angezeigt werden sollen.
-            </p>
-        </div>
+    <div class="container">
+        <h2>Länderübersicht</h2>
 
         <div class="search-box">
-            <label for="countrySearch">Suche</label>
-            <input type="text" id="countrySearch" placeholder="Land suchen..." onkeyup="filterCountries()" />
-        </div>
-    </div>
-
-    <form method="get" th:action="@{/}">
-        <div class="country-grid" id="countryList">
-            <label class="country-item"
-                   th:each="country : ${countries}"
-                   th:attr="data-name=${#strings.toLowerCase(country.name + ' ' + country.isoCode)}">
-
-                <input type="checkbox"
-                       name="selectedCountries"
-                       th:value="${country.id}"
-                       th:checked="${selectedCountries.contains(country.id)}" />
-
-                <span class="country-name" th:text="${country.name}">Country Name</span>
-                <span class="country-meta" th:text="${country.isoCode}">ISO: XX</span>
-            </label>
+            <form th:action="@{/}" method="get">
+                <input type="text" name="search" th:value="${searchQuery}" placeholder="Land suchen...">
+                <input type="hidden" name="sortBy" th:value="${sortBy}">
+                <input type="hidden" name="ascending" th:value="${ascending}">
+                <button type="submit">Suchen</button>
+            </form>
         </div>
 
-        <div class="selection-actions">
-            <button type="submit" class="primary-button">Auswahl übernehmen</button>
+        <table>
+            <thead>
+                <tr>
+                    <th><a th:href="@{/?(sortBy='name', ascending=${!ascending})}">Land</a></th>
+                    <th>Kontinent</th>
+                    <th><a th:href="@{/?(sortBy='avgEmission', ascending=${!ascending})}">Ø CO₂</a></th>
+                    <th><a th:href="@{/?(sortBy='minEmission', ascending=${!ascending})}">Min</a></th>
+                    <th><a th:href="@{/?(sortBy='maxEmission', ascending=${!ascending})}">Max</a></th>
+                    <th><a th:href="@{/?(sortBy='recordCount', ascending=${!ascending})}">Anzahl</a></th>
+                    <th>Aktion</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="country : ${countries}">
+                    <td th:text="${country.name}">Land</td>
+                    <td th:text="${country.continent}">Kontinent</td>
+                    <td th:text="${#numbers.formatDecimal(country.avgEmission, 1, 2)}">0.00</td>
+                    <td th:text="${#numbers.formatDecimal(country.minEmission, 1, 2)}">0.00</td>
+                    <td th:text="${#numbers.formatDecimal(country.maxEmission, 1, 2)}">0.00</td>
+                    <td th:text="${country.recordCount}">0</td>
+                    <td><a th:href="@{/country/{id}(id=${country.id})}" class="btn">Details</a></td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(countries)}">
+                    <td colspan="7" style="text-align: center;">Keine Länder gefunden</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2026 LikeHeroToZero. Alle Rechte vorbehalten.</p>
         </div>
-    </form>
-
-</section>
-
-<section class="chart-section">
-    <h2>Diagramm</h2>
-
-    <div class="chart-placeholder" th:if="${selectedCountryCount == 0}">
-        Bitte wähle zuerst mindestens ein Land aus.
-    </div>
-
-    <div class="chart-container" th:if="${selectedCountryCount > 0}">
-    <canvas id="emissionChart"></canvas>
-    </div>
-</section>
-     
-    
-</main>
-
-<footer>
-    <div class="footer-container">
-        <p><strong>Fake Impressum</strong></p>
-        <p>Like Hero To Zero GmbH, Musterstraße 12, 80331 München</p>
-        <p>E-Mail: info@likeherotozero.de | Telefon: +49 89 123456</p>
-    </div>
-</footer>
-
-<script>
-    function filterCountries() {
-        const input = document.getElementById("countrySearch");
-        const filter = input.value.toLowerCase();
-        const items = document.querySelectorAll("#countryList .country-item");
-
-        items.forEach(item => {
-            const searchableText = item.getAttribute("data-name");
-
-            if (searchableText.includes(filter)) {
-                item.style.display = "flex";
-            } else {
-                item.style.display = "none";
-            }
-        });
-    }
-</script>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-<script th:inline="javascript">
-    /*<![CDATA[*/
-    const selectedCountryCount = /*[[${selectedCountryCount}]]*/ 0;
-    const chartLabels = /*[[${chartLabels}]]*/ [];
-    const chartDatasets = /*[[${chartDatasets}]]*/ [];
-
-    if (selectedCountryCount > 0) {
-        const ctx = document.getElementById('emissionChart');
-
-        if (ctx) {
-            new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: chartLabels,
-                    datasets: chartDatasets
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    interaction: {
-                        mode: 'index',
-                        intersect: false
-                    },
-                    plugins: {
-                        legend: {
-                            display: true,
-                            position: 'top'
-                        },
-                        title: {
-                            display: true,
-                            text: 'CO2-Emissionen ausgewählter Länder'
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: 'Emission Value'
-                            }
-                        },
-                        x: {
-                            title: {
-                                display: true,
-                                text: 'Reporting Year'
-                            }
-                        }
-                    }
-                }
-            });
-        }
-    }
-    /*]]>*/
-</script>
-
-
+    </footer>
 </body>
 </html>

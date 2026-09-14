@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emissionssuche - LikeHeroToZero</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; line-height: 1.6; background: #f4f4f4; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header { background: #2c3e50; color: white; padding: 1rem 0; margin-bottom: 2rem; }
+        header .container { display: flex; justify-content: space-between; align-items: center; }
+        nav a { color: white; text-decoration: none; margin-left: 1rem; }
+        .filter-box { background: white; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .filter-box form { display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; }
+        .filter-box input[type="text"], .filter-box input[type="number"], .filter-box select { padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; }
+        .filter-box button { padding: 0.5rem 1rem; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        th, td { padding: 1rem; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background: #34495e; color: white; }
+        tr:hover { background: #f5f5f5; }
+        th a { color: white; text-decoration: none; }
+        th a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Emissionssuche</h1>
+            <nav>
+                <a href="/">Startseite</a>
+                <a href="/about">Über</a>
+                <a href="/login">Login</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="filter-box">
+            <form th:action="@{/emissions}" method="get">
+                <label for="countryId">Land:</label>
+                <select name="countryId" id="countryId">
+                    <option value="">Alle Länder</option>
+                    <option th:each="c : ${countries}" th:value="${c.id}" th:text="${c.name}" th:selected="${c.id == selectedCountryId}">Land</option>
+                </select>
+
+                <label for="year">Jahr:</label>
+                <input type="number" name="year" id="year" th:value="${selectedYear}" placeholder="Jahr">
+
+                <label for="min">Min CO₂:</label>
+                <input type="number" name="min" id="min" th:value="${selectedMin}" step="0.01" placeholder="Min">
+
+                <label for="max">Max CO₂:</label>
+                <input type="number" name="max" id="max" th:value="${selectedMax}" step="0.01" placeholder="Max">
+
+                <button type="submit">Suchen</button>
+            </form>
+        </div>
+
+        <h3>Suchergebnisse</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th><a th:href="@{/emissions?(sortBy='country', ascending=${!ascending})}">Land</a></th>
+                    <th><a th:href="@{/emissions?(sortBy='year', ascending=${!ascending})}">Jahr</a></th>
+                    <th><a th:href="@{/emissions?(sortBy='co2Value', ascending=${!ascending})}">CO₂-Wert</a></th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="emission : ${emissions}">
+                    <td th:text="${emission.country.name}">Land</td>
+                    <td th:text="${emission.year}">Jahr</td>
+                    <td th:text="${#numbers.formatDecimal(emission.co2Value, 1, 2)}">0.00</td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(emissions)}">
+                    <td colspan="3" style="text-align: center;">Keine Emissionsdaten gefunden</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

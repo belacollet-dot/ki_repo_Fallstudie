@@ -2,121 +2,95 @@ package de.likeherotozero.config;
 
 import de.likeherotozero.entity.Co2EmissionRecord;
 import de.likeherotozero.entity.Country;
-import de.likeherotozero.entity.ScientistUser;
 import de.likeherotozero.entity.UserRole;
 import de.likeherotozero.repository.Co2EmissionRepository;
 import de.likeherotozero.repository.CountryRepository;
-import de.likeherotozero.repository.ScientistUserRepository;
+import de.likeherotozero.service.Co2EmissionService;
+import de.likeherotozero.service.CountryService;
+import de.likeherotozero.service.ScientistUserService;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
-import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
-import java.math.BigDecimal;
-import java.nio.charset.StandardCharsets;
-import java.util.Optional;
 
 @Configuration
 public class DataInitializer {
 
     @Bean
-    CommandLineRunner initData(
-            CountryRepository countryRepository,
-            Co2EmissionRepository co2EmissionRepository,
-            ScientistUserRepository scientistUserRepository,
-            PasswordEncoder passwordEncoder
-    ) {
+    public CommandLineRunner initData(ScientistUserService userService,
+                                      CountryService countryService,
+                                      Co2EmissionService emissionService,
+                                      CountryRepository countryRepository,
+                                      Co2EmissionRepository emissionRepository) {
         return args -> {
+            // Nur ausführen, wenn noch keine Daten existieren
+            if (userService.getAllUsers().isEmpty()) {
+                // Admin erstellen
+                userService.createUser("Admin", "admin@likeherotozero.de", "admin123", UserRole.ADMIN);
 
-            ScientistUser scientist = scientistUserRepository.findByUsername("wissenschaftler1")
-                    .orElseGet(() -> {
-                        ScientistUser user = new ScientistUser();
-                        user.setUsername("wissenschaftler1");
-                        user.setPasswordHash(passwordEncoder.encode("test1234"));
-                        user.setEmail("wissenschaftler1@example.com");
-                        user.setRole(UserRole.SCIENTIST);
-                        user.setEnabled(true);
-                        return scientistUserRepository.save(user);
-                    });
+                // Scientist erstellen
+                userService.createUser("Scientist", "scientist@likeherotozero.de", "scientist123", UserRole.SCIENTIST);
 
-            if (co2EmissionRepository.count() > 0) {
-                return;
-            }
+                // Länder erstellen
+                Country germany = new Country();
+                germany.setName("Deutschland");
+                germany.setCode("DE");
+                germany.setContinent("Europa");
+                countryService.saveCountry(germany);
 
-            ClassPathResource resource = new ClassPathResource("co2-emissions.csv");
+                Country france = new Country();
+                france.setName("Frankreich");
+                france.setCode("FR");
+                france.setContinent("Europa");
+                countryService.saveCountry(france);
 
-            try (BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8))) {
+                Country italy = new Country();
+                italy.setName("Italien");
+                italy.setCode("IT");
+                italy.setContinent("Europa");
+                countryService.saveCountry(italy);
 
-                String line;
-                boolean firstLine = true;
-
-                while ((line = reader.readLine()) != null) {
-                    if (firstLine) {
-                        firstLine = false;
-                        continue;
-                    }
-
-                    String[] parts = line.split(",", -1);
-
-                    if (parts.length < 4) {
-                        continue;
-                    }
-
-                    String countryName = parts[0].trim();
-                    String countryCode = parts[1].trim();
-                    String yearText = parts[2].trim();
-                    String valueText = parts[3].trim();
-
-                    if (countryName.isEmpty() || countryCode.isEmpty() || yearText.isEmpty() || valueText.isEmpty()) {
-                        continue;
-                    }
-
-                    if (!countryCode.matches("[A-Z]{3}")) {
-                        continue;
-                    }
-
-                    Integer year;
-                    BigDecimal emissionValue;
-
-                    try {
-                        year = Integer.valueOf(yearText);
-                        emissionValue = new BigDecimal(valueText);
-                    } catch (Exception e) {
-                        continue;
-                    }
-
-                    Optional<Country> existingCountry = countryRepository.findByIsoCodeIgnoreCase(countryCode);
-
-                    Country country = existingCountry.orElseGet(() -> {
-                        Country newCountry = new Country();
-                        newCountry.setIsoCode(countryCode);
-                        newCountry.setName(countryName);
-                        return countryRepository.save(newCountry);
-                    });
-
-                    boolean recordExists = co2EmissionRepository
-                            .existsByCountry_IsoCodeAndReportingYear(countryCode, year);
-
-                    if (recordExists) {
-                        continue;
-                    }
-
-                    Co2EmissionRecord record = new Co2EmissionRecord();
-                    record.setCountry(country);
-                    record.setCreatedByUser(scientist);
-                    record.setReportingYear(year);
-                    record.setEmissionValue(emissionValue);
-                    record.setUnit("kt");
-                    record.setSource("World Bank Open Data - EN.ATM.CO2E.KT");
-                    record.setComment("Initialimport aus co2-emissions.csv");
-
-                    co2EmissionRepository.save(record);
-                }
+                // CSV-Daten importieren
+                importCsvData(countryRepository, emissionRepository);
             }
         };
+    }
+
+    private void importCsvData(CountryRepository countryRepository, Co2EmissionRepository emissionRepository) throws Exception {
+        ClassPathResource resource = new ClassPathResource("co2-emissions.csv");
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(resource.getInputStream()))) {
+            String line;
+            boolean skipHeader = true;
+
+            while ((line = reader.readLine()) != null) {
+                if (skipHeader) {
+                    skipHeader = false;
+                    continue;
+                }
+
+                String[] parts = line.split(";");
+                if (parts.length >= 3) {
+                    try {
+                        String countryName = parts[0].trim();
+                        Integer year = Integer.parseInt(parts[1].trim());
+                        Double co2Value = Double.parseDouble(parts[2].trim());
+
+                        Country country = countryRepository.findByName(countryName).orElse(null);
+                        if (country != null) {
+                            Co2EmissionRecord record = new Co2EmissionRecord();
+                            record.setCountry(country);
+                            record.setYear(year);
+                            record.setCo2Value(co2Value);
+                            emissionRepository.save(record);
+                        }
+                    } catch (NumberFormatException e) {
+                        // Ungültige Zeile überspringen
+                    }
+                }
+            }
+        }
     }
 }

@@ -4,107 +4,142 @@ import de.likeherotozero.entity.Co2EmissionRecord;
 import de.likeherotozero.entity.Country;
 import de.likeherotozero.service.Co2EmissionService;
 import de.likeherotozero.service.CountryService;
+
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 
-import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
-import java.util.TreeSet;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.stream.Collectors;
 
 @Controller
 public class HomeController {
 
     private final CountryService countryService;
-    private final Co2EmissionService co2EmissionService;
+    private final Co2EmissionService emissionService;
 
-    public HomeController(CountryService countryService, Co2EmissionService co2EmissionService) {
+    public HomeController(CountryService countryService, Co2EmissionService emissionService) {
         this.countryService = countryService;
-        this.co2EmissionService = co2EmissionService;
+        this.emissionService = emissionService;
     }
 
     @GetMapping("/")
-    public String showHomePage(
-            @RequestParam(name = "selectedCountries", required = false) List<Long> selectedCountries,
-            Model model) {
+    public String home(Model model,
+                       @RequestParam(required = false) String search,
+                       @RequestParam(defaultValue = "name") String sortBy,
+                       @RequestParam(defaultValue = "true") boolean ascending) {
+        List<Country> countries = countryService.searchCountries(search);
 
-        if (selectedCountries == null) {
-            selectedCountries = Collections.emptyList();
-        }
+        // Statistiken berechnen
+        List<CountryDashboardRow> rows = countries.stream()
+            .map(country -> {
+                List<Co2EmissionRecord> records = emissionService.getEmissionsByCountry(country.getId());
+                return new CountryDashboardRow(
+                    country.getId(),
+                    country.getName(),
+                    country.getContinent(),
+                    emissionService.calculateAverage(records),
+                    emissionService.calculateMin(records),
+                    emissionService.calculateMax(records),
+                    records.size()
+                );
+            })
+            .sorted(getCountryComparator(sortBy, ascending))
+            .collect(Collectors.toList());
 
-        List<Country> countries = new ArrayList<>(countryService.findAllCountries());
-        List<Country> selectedCountryEntities = selectedCountries.isEmpty()
-                ? Collections.emptyList()
-                : countryService.findAllByIds(selectedCountries);
-
-        Set<Long> selectedCountryIdSet = new HashSet<>(selectedCountries);
-
-        countries.sort(
-                Comparator
-                        .comparing((Country country) -> !selectedCountryIdSet.contains(country.getId()))
-                        .thenComparing(country -> country.getName(), String.CASE_INSENSITIVE_ORDER)
-        );
-
-        Set<Integer> yearSet = new TreeSet<>();
-        Map<Long, Map<Integer, BigDecimal>> countryYearValues = new HashMap<>();
-
-        for (Country country : selectedCountryEntities) {
-            List<Co2EmissionRecord> records = co2EmissionService.findByCountry(country);
-            Map<Integer, BigDecimal> valuesByYear = new HashMap<>();
-
-            for (Co2EmissionRecord record : records) {
-                yearSet.add(record.getReportingYear());
-                valuesByYear.put(record.getReportingYear(), record.getEmissionValue());
-            }
-
-            countryYearValues.put(country.getId(), valuesByYear);
-        }
-
-        List<Integer> chartLabels = new ArrayList<>(yearSet);
-        List<Map<String, Object>> chartDatasets = new ArrayList<>();
-
-        String[] colors = {
-                "#0f766e", "#2563eb", "#dc2626", "#7c3aed", "#ea580c",
-                "#16a34a", "#db2777", "#0891b2", "#4f46e5", "#a16207"
-        };
-
-        int colorIndex = 0;
-
-        for (Country country : selectedCountryEntities) {
-            Map<Integer, BigDecimal> valuesByYear = countryYearValues.get(country.getId());
-            List<BigDecimal> data = new ArrayList<>();
-
-            for (Integer year : chartLabels) {
-                data.add(valuesByYear.getOrDefault(year, null));
-            }
-
-            Map<String, Object> dataset = new HashMap<>();
-            dataset.put("label", country.getName());
-            dataset.put("data", data);
-            dataset.put("borderColor", colors[colorIndex % colors.length]);
-            dataset.put("backgroundColor", colors[colorIndex % colors.length]);
-            dataset.put("fill", false);
-            dataset.put("tension", 0.25);
-            dataset.put("spanGaps", false);
-
-            chartDatasets.add(dataset);
-            colorIndex++;
-        }
-
-        model.addAttribute("countries", countries);
-        model.addAttribute("selectedCountries", selectedCountries);
-        model.addAttribute("selectedCountryCount", selectedCountries.size());
-        model.addAttribute("chartLabels", chartLabels);
-        model.addAttribute("chartDatasets", chartDatasets);
+        model.addAttribute("countries", rows);
+        model.addAttribute("searchQuery", search);
+        model.addAttribute("sortBy", sortBy);
+        model.addAttribute("ascending", ascending);
 
         return "home";
     }
+
+    @GetMapping("/country/{id}")
+    public String countryDetail(@PathVariable @NonNull Long id, Model model,
+                                @RequestParam(required = false) Integer year,
+                                @RequestParam(defaultValue = "year") String sortBy,
+                                @RequestParam(defaultValue = "false") boolean ascending) {
+        Country country = countryService.getCountryById(id);
+        List<Co2EmissionRecord> records = emissionService.getEmissionsByCountry(id);
+
+        // Nach Jahr filtern
+        if (year != null) {
+            records = records.stream()
+                .filter(r -> r.getYear().equals(year))
+                .collect(Collectors.toList());
+        }
+
+        // Sortieren
+        records = sortEmissions(records, sortBy, ascending);
+
+        // Verfügbare Jahre für Dropdown
+        @SuppressWarnings("null")
+        List<Integer> availableYears = emissionService.getEmissionsByCountry(id).stream()
+            .map(Co2EmissionRecord::getYear)
+            .distinct()
+            .sorted()
+            .collect(Collectors.toList());
+
+        model.addAttribute("country", country);
+        model.addAttribute("emissions", records);
+        model.addAttribute("availableYears", availableYears);
+        model.addAttribute("selectedYear", year);
+        model.addAttribute("sortBy", sortBy);
+        model.addAttribute("ascending", ascending);
+
+        return "country-detail";
+    }
+
+    @GetMapping("/about")
+    public String about() {
+        return "about";
+    }
+
+    @GetMapping("/legal")
+    public String legal() {
+        return "legal";
+    }
+
+    private Comparator<CountryDashboardRow> getCountryComparator(String sortBy, boolean ascending) {
+        @SuppressWarnings("null")
+        Comparator<CountryDashboardRow> comparator = switch (sortBy) {
+            case "avgEmission" -> Comparator.comparingDouble(CountryDashboardRow::avgEmission);
+            case "minEmission" -> Comparator.comparingDouble(CountryDashboardRow::minEmission);
+            case "maxEmission" -> Comparator.comparingDouble(CountryDashboardRow::maxEmission);
+            case "recordCount" -> Comparator.comparingInt(CountryDashboardRow::recordCount);
+            default -> Comparator.comparing(CountryDashboardRow::name, String.CASE_INSENSITIVE_ORDER);
+        };
+
+        return ascending ? comparator : comparator.reversed();
+    }
+
+    private List<Co2EmissionRecord> sortEmissions(List<Co2EmissionRecord> records, String sortBy, boolean ascending) {
+        @SuppressWarnings("null")
+        Comparator<Co2EmissionRecord> comparator = switch (sortBy) {
+            case "co2Value" -> Comparator.comparing(Co2EmissionRecord::getCo2Value);
+            default -> Comparator.comparing(Co2EmissionRecord::getYear);
+        };
+
+        if (!ascending) {
+            comparator = comparator.reversed();
+        }
+
+        return records.stream().sorted(comparator).collect(Collectors.toList());
+    }
+
+    // Record-Klasse für Dashboard-Anzeige
+    public record CountryDashboardRow(
+        Long id,
+        String name,
+        String continent,
+        double avgEmission,
+        double minEmission,
+        double maxEmission,
+        int recordCount
+    ) {}
 }

@@ -1,111 +1,105 @@
 package de.likeherotozero.service;
 
 import de.likeherotozero.entity.Co2EmissionRecord;
-import de.likeherotozero.entity.Country;
-import de.likeherotozero.entity.ScientistUser;
-import de.likeherotozero.form.CountryDashboardForm;
-import de.likeherotozero.form.EmissionRecordRowForm;
 import de.likeherotozero.repository.Co2EmissionRepository;
-import de.likeherotozero.repository.CountryRepository;
-import de.likeherotozero.repository.ScientistUserRepository;
-import org.springframework.stereotype.Service;
+import jakarta.persistence.EntityNotFoundException;
 
+import org.springframework.lang.NonNull;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
+@Transactional
 public class Co2EmissionService {
 
-    private final Co2EmissionRepository co2EmissionRepository;
-    private final CountryRepository countryRepository;
-    private final ScientistUserRepository scientistUserRepository;
+    private final Co2EmissionRepository emissionRepository;
 
-    public Co2EmissionService(Co2EmissionRepository co2EmissionRepository,
-                              CountryRepository countryRepository,
-                              ScientistUserRepository scientistUserRepository) {
-        this.co2EmissionRepository = co2EmissionRepository;
-        this.countryRepository = countryRepository;
-        this.scientistUserRepository = scientistUserRepository;
+    public Co2EmissionService(Co2EmissionRepository emissionRepository) {
+        this.emissionRepository = emissionRepository;
     }
 
-    public List<Co2EmissionRecord> findByCountry1(Country country) {
-        return co2EmissionRepository.findByCountryOrderByReportingYearDesc(country);
+    public List<Co2EmissionRecord> getAllEmissions() {
+        return emissionRepository.findAll();
     }
 
-    public void createEmission(CountryDashboardForm form, String username) {
+    public List<Co2EmissionRecord> getEmissionsByCountry(Long countryId) {
+        return emissionRepository.findByCountryIdOrderByYearDesc(countryId);
+    }
+
+    public List<Co2EmissionRecord> getEmissionsByScientist(Long scientistId) {
+        return emissionRepository.findByScientistIdOrderByYearDesc(scientistId);
+    }
+
+    public Co2EmissionRecord getEmissionById(@NonNull Long id) {
+        return emissionRepository.findById(id)
+            .orElseThrow(() -> new EntityNotFoundException("Emissionsrekord nicht gefunden mit ID: " + id));
+    }
+
+    public Co2EmissionRecord saveEmission(@NonNull Co2EmissionRecord record) {
+        return emissionRepository.save(record);
+    }
+
+    public void deleteEmission(@NonNull Long id) {
+        emissionRepository.deleteById(id);
+    }
+
+    public List<Co2EmissionRecord> filterEmissions(Long countryId, Integer year, Double min, Double max) {
+        List<Co2EmissionRecord> emissions = getAllEmissions();
+
+        return emissions.stream()
+            .filter(e -> countryId == null || e.getCountry().getId().equals(countryId))
+            .filter(e -> year == null || e.getYear().equals(year))
+            .filter(e -> min == null || e.getCo2Value() >= min)
+            .filter(e -> max == null || e.getCo2Value() <= max)
+            .collect(Collectors.toList());
+    }
+
+    public List<Co2EmissionRecord> getEmissionsSorted(String sortBy, boolean ascending) {
+        List<Co2EmissionRecord> emissions = getAllEmissions();
+
         @SuppressWarnings("null")
-        Country country = countryRepository.findById(form.getCountryId())
-                .orElseThrow(() -> new IllegalArgumentException("Land nicht gefunden: " + form.getCountryId()));
+        Comparator<Co2EmissionRecord> comparator = switch (sortBy) {
+            case "year" -> Comparator.comparing(Co2EmissionRecord::getYear);
+            case "co2Value" -> Comparator.comparing(Co2EmissionRecord::getCo2Value);
+            case "country" -> Comparator.comparing(e -> e.getCountry().getName(), String.CASE_INSENSITIVE_ORDER);
+            default -> Comparator.comparing(Co2EmissionRecord::getYear);
+        };
 
-        ScientistUser scientistUser = scientistUserRepository.findByUsername(username)
-                .orElseThrow(() -> new IllegalArgumentException("Benutzer nicht gefunden: " + username));
-
-        Co2EmissionRecord record = new Co2EmissionRecord();
-        record.setCountry(country);
-        record.setCreatedByUser(scientistUser);
-        record.setReportingYear(form.getReportingYear());
-        record.setEmissionValue(form.getEmissionValue());
-        record.setUnit("tCO2");
-        record.setSource("Dashboard");
-        record.setComment("Datensatz über Scientist Dashboard erstellt.");
-
-        co2EmissionRepository.save(record);
-    }
-
-    public List<Co2EmissionRecord> findByCountry(Country country) {
-    return co2EmissionRepository.findByCountryOrderByReportingYearDesc(country);
-}
-
-public void updateExistingRecords(Country country, List<EmissionRecordRowForm> existingRecords) {
-    for (EmissionRecordRowForm row : existingRecords) {
-        @SuppressWarnings("null")
-        Co2EmissionRecord record = co2EmissionRepository.findById(row.getRecordId())
-                .orElseThrow(() -> new IllegalArgumentException("Datensatz nicht gefunden: " + row.getRecordId()));
-
-        if (co2EmissionRepository.existsByCountryAndReportingYearAndIdNot(country, row.getReportingYear(), record.getId())) {
-            throw new IllegalArgumentException("Für dieses Land existiert bereits ein Datensatz für das Jahr " + row.getReportingYear() + ".");
+        if (!ascending) {
+            comparator = comparator.reversed();
         }
 
-        record.setReportingYear(row.getReportingYear());
-        record.setEmissionValue(row.getEmissionValue());
-        record.setSource(row.getSource());
-        record.setUnit("kt");
-
-        co2EmissionRepository.save(record);
-    }
-}
-
-public void addNewRecord(Country country, EmissionRecordRowForm newRecord, String username) {
-    if (newRecord.getReportingYear() == null ||
-        newRecord.getEmissionValue() == null ||
-        newRecord.getSource() == null ||
-        newRecord.getSource().isBlank()) {
-        throw new IllegalArgumentException("Für einen neuen Datensatz müssen Reporting Year, Emission Value und Source ausgefüllt sein.");
+        return emissions.stream().sorted(comparator).collect(Collectors.toList());
     }
 
-    if (co2EmissionRepository.existsByCountryAndReportingYear(country, newRecord.getReportingYear())) {
-        throw new IllegalArgumentException("Für dieses Land existiert bereits ein Datensatz für das Jahr " + newRecord.getReportingYear() + ".");
+    @SuppressWarnings("null")
+    public double calculateAverage(List<Co2EmissionRecord> records) {
+        if (records.isEmpty()) return 0.0;
+        return records.stream()
+            .mapToDouble(Co2EmissionRecord::getCo2Value)
+            .average()
+            .orElse(0.0);
     }
 
-    ScientistUser scientistUser = scientistUserRepository.findByUsername(username)
-            .orElseThrow(() -> new IllegalArgumentException("Benutzer nicht gefunden: " + username));
+    @SuppressWarnings("null")
+    public double calculateMin(List<Co2EmissionRecord> records) {
+        if (records.isEmpty()) return 0.0;
+        return records.stream()
+            .mapToDouble(Co2EmissionRecord::getCo2Value)
+            .min()
+            .orElse(0.0);
+    }
 
-    Co2EmissionRecord record = new Co2EmissionRecord();
-    record.setCountry(country);
-    record.setCreatedByUser(scientistUser);
-    record.setReportingYear(newRecord.getReportingYear());
-    record.setEmissionValue(newRecord.getEmissionValue());
-    record.setSource(newRecord.getSource().trim());
-    record.setUnit("kt");
-    record.setComment("Datensatz über Scientist Dashboard erstellt.");
-
-    co2EmissionRepository.save(record);
-}
-
-public List<Co2EmissionRecord> findAll() {
-    return co2EmissionRepository.findAll();
-}
-
-public List<Co2EmissionRecord> findByCreatedByUser(ScientistUser user) {
-    return co2EmissionRepository.findByCreatedByUser(user);
-}
+    @SuppressWarnings("null")
+    public double calculateMax(List<Co2EmissionRecord> records) {
+        if (records.isEmpty()) return 0.0;
+        return records.stream()
+            .mapToDouble(Co2EmissionRecord::getCo2Value)
+            .max()
+            .orElse(0.0);
+    }
 }

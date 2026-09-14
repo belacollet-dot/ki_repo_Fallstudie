@@ -1,140 +1,205 @@
 package de.likeherotozero.controller;
 
+import de.likeherotozero.entity.Co2EmissionRecord;
 import de.likeherotozero.entity.Country;
-import de.likeherotozero.form.CountryEditForm;
+import de.likeherotozero.entity.ScientistUser;
+import de.likeherotozero.form.CreateEmissionForm;
 import de.likeherotozero.service.Co2EmissionService;
 import de.likeherotozero.service.CountryService;
+import de.likeherotozero.service.ScientistUserService;
 import jakarta.validation.Valid;
-import org.springframework.security.core.Authentication;
+
+import org.springframework.lang.NonNull;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
-import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Comparator;
+import java.util.List;
+import java.util.stream.Collectors;
+
 @Controller
-@RequestMapping("/scientist/dashboard")
+@RequestMapping("/scientist")
 public class ScientistDashboardController {
 
+    private final ScientistUserService userService;
     private final CountryService countryService;
-    private final Co2EmissionService co2EmissionService;
+    private final Co2EmissionService emissionService;
 
-    public ScientistDashboardController(CountryService countryService,
-                                        Co2EmissionService co2EmissionService) {
+    public ScientistDashboardController(ScientistUserService userService,
+                                        CountryService countryService,
+                                        Co2EmissionService emissionService) {
+        this.userService = userService;
         this.countryService = countryService;
-        this.co2EmissionService = co2EmissionService;
+        this.emissionService = emissionService;
     }
 
-    @GetMapping
-    public String showDashboard(Authentication authentication,
-                                @RequestParam(value = "editId", required = false) Long editId,
-                                @RequestParam(value = "success", required = false) String success,
-                                Model model) {
+    @GetMapping("/dashboard")
+    public String dashboard(Model model,
+                            @AuthenticationPrincipal User currentUser,
+                            @RequestParam(required = false) String search,
+                            @RequestParam(defaultValue = "name") String sortBy,
+                            @RequestParam(defaultValue = "true") boolean ascending) {
+        ScientistUser scientist = userService.getUserByEmail(currentUser.getUsername());
 
-        model.addAttribute("username", authentication.getName());
-        model.addAttribute("countryRows", countryService.findDashboardRows());
-        model.addAttribute("success", success);
-        model.addAttribute("editMode", editId != null);
+        List<Country> countries = countryService.searchCountries(search);
 
-        if (editId != null) {
-            Country selectedCountry = countryService.findById(editId);
-            model.addAttribute("countryEditForm",
-                    countryService.createEditForm(editId, co2EmissionService.findByCountry(selectedCountry)));
-            model.addAttribute("scrollToEdit", true);
-        }
+        // Länder mit Statistiken
+        List<CountryDashboardRow> rows = countries.stream()
+            .map(country -> {
+                List<Co2EmissionRecord> records = emissionService.getEmissionsByCountry(country.getId());
+                ScientistUser editor = country.getEditedBy();
+                return new CountryDashboardRow(
+                    country.getId(),
+                    country.getName(),
+                    country.getContinent(),
+                    emissionService.calculateAverage(records),
+                    emissionService.calculateMin(records),
+                    emissionService.calculateMax(records),
+                    records.size(),
+                    editor != null ? editor.getName() : "Nicht zugewiesen"
+                );
+            })
+            .sorted(getCountryComparator(sortBy, ascending))
+            .collect(Collectors.toList());
+
+        model.addAttribute("scientist", scientist);
+        model.addAttribute("countries", rows);
+        model.addAttribute("searchQuery", search);
+        model.addAttribute("sortBy", sortBy);
+        model.addAttribute("ascending", ascending);
 
         return "ScientistDashboard";
     }
 
-    @SuppressWarnings("null")
-    @PostMapping("/save")
-    public String saveCountry(Authentication authentication,
-                              @Valid @ModelAttribute("countryEditForm") CountryEditForm countryEditForm,
-                              BindingResult bindingResult,
-                              Model model) {
+    @GetMapping("/my-emissions")
+    public String myEmissions(Model model, @AuthenticationPrincipal User currentUser) {
+        ScientistUser scientist = userService.getUserByEmail(currentUser.getUsername());
+        List<Co2EmissionRecord> emissions = emissionService.getEmissionsByScientist(scientist.getId());
 
+        model.addAttribute("scientist", scientist);
+        model.addAttribute("emissions", emissions);
+
+        return "ScientistMyEmissions";
+    }
+
+    @GetMapping("/emission/new")
+    public String newEmissionForm(Model model) {
+        model.addAttribute("emissionForm", new CreateEmissionForm());
+        model.addAttribute("countries", countryService.getAllCountries());
+        return "ScientistEmissionForm";
+    }
+
+    @PostMapping("/emission/new")
+    public String createEmission(@Valid @ModelAttribute("emissionForm") CreateEmissionForm form,
+                                 BindingResult result,
+                                 @AuthenticationPrincipal User currentUser) {
+        if (result.hasErrors()) {
+            model.addAttribute("countries", countryService.getAllCountries());
+            return "ScientistEmissionForm";
+        }
+
+        ScientistUser scientist = userService.getUserByEmail(currentUser.getUsername());
+        Country country = countryService.getCountryById(form.getCountryId());
+
+        Co2EmissionRecord record = new Co2EmissionRecord();
+        record.setCountry(country);
+        record.setYear(form.getYear());
+        record.setCo2Value(form.getCo2Value());
+        record.setScientist(scientist);
+
+        emissionService.saveEmission(record);
+        return "redirect:/scientist/my-emissions";
+    }
+
+    @GetMapping("/emission/edit/{id}")
+    public String editEmissionForm(@PathVariable Long id, Model model,
+                                   @AuthenticationPrincipal User currentUser) {
+        Co2EmissionRecord record = emissionService.getEmissionById(id);
+        ScientistUser scientist = userService.getUserByEmail(currentUser.getUsername());
+
+        // Nur eigene Rekorde bearbeiten
+        if (!record.getScientist().getId().equals(scientist.getId())) {
+            return "redirect:/scientist/my-emissions?error=permission";
+        }
+
+        CreateEmissionForm form = new CreateEmissionForm();
+        form.setCountryId(record.getCountry().getId());
+        form.setYear(record.getYear());
+        form.setCo2Value(record.getCo2Value());
+
+        model.addAttribute("emissionForm", form);
+        model.addAttribute("countries", countryService.getAllCountries());
+        model.addAttribute("recordId", id);
+
+        return "ScientistEmissionForm";
+    }
+
+    @PostMapping("/emission/edit/{id}")
+    public String updateEmission(@PathVariable Long id,
+                                 @Valid @ModelAttribute("emissionForm") CreateEmissionForm form,
+                                 BindingResult result,
+                                 @AuthenticationPrincipal User currentUser) {
+        if (result.hasErrors()) {
+            model.addAttribute("countries", countryService.getAllCountries());
+            return "ScientistEmissionForm";
+        }
+
+        Co2EmissionRecord record = emissionService.getEmissionById(id);
+        ScientistUser scientist = userService.getUserByEmail(currentUser.getUsername());
+
+        // Nur eigene Rekorde bearbeiten
+        if (!record.getScientist().getId().equals(scientist.getId())) {
+            return "redirect:/scientist/my-emissions?error=permission";
+        }
+
+        Country country = countryService.getCountryById(form.getCountryId());
+        record.setCountry(country);
+        record.setYear(form.getYear());
+        record.setCo2Value(form.getCo2Value());
+
+        emissionService.saveEmission(record);
+        return "redirect:/scientist/my-emissions";
+    }
+
+    @PostMapping("/emission/delete/{id}")
+    public String deleteEmission(@PathVariable @NonNull Long id,
+                                 @AuthenticationPrincipal User currentUser) {
+        Co2EmissionRecord record = emissionService.getEmissionById(id);
+        ScientistUser scientist = userService.getUserByEmail(currentUser.getUsername());
+
+        // Nur eigene Rekorde löschen
+        if (!record.getScientist().getId().equals(scientist.getId())) {
+            return "redirect:/scientist/my-emissions?error=permission";
+        }
+
+        emissionService.deleteEmission(id);
+        return "redirect:/scientist/my-emissions";
+    }
+
+    private Comparator<CountryDashboardRow> getCountryComparator(String sortBy, boolean ascending) {
         @SuppressWarnings("null")
-        Country country = countryService.findById(countryEditForm.getCountryId());
+        Comparator<CountryDashboardRow> comparator = switch (sortBy) {
+            case "avgEmission" -> Comparator.comparingDouble(CountryDashboardRow::avgEmission);
+            case "recordCount" -> Comparator.comparingInt(CountryDashboardRow::recordCount);
+            default -> Comparator.comparing(CountryDashboardRow::name, String.CASE_INSENSITIVE_ORDER);
+        };
 
-        if (bindingResult.hasErrors()) {
-            model.addAttribute("username", authentication.getName());
-            model.addAttribute("countryRows", countryService.findDashboardRows());
-            model.addAttribute("editMode", true);
-            model.addAttribute("scrollToEdit", true);
-            return "ScientistDashboard";
-        }
-
-        try {
-            countryService.updateCountryBaseData(countryEditForm.getCountryId(),
-                    countryEditForm.getCountry(),
-                    countryEditForm.getIsoCode());
-
-            co2EmissionService.updateExistingRecords(country, countryEditForm.getExistingRecords());
-        } catch (IllegalArgumentException ex) {
-            bindingResult.addError(new FieldError(
-                    "countryEditForm",
-                    "existingRecords",
-                    ex.getMessage()
-            ));
-
-            model.addAttribute("username", authentication.getName());
-            model.addAttribute("countryRows", countryService.findDashboardRows());
-            model.addAttribute("editMode", true);
-            model.addAttribute("scrollToEdit", true);
-            return "ScientistDashboard";
-        }
-
-        return "redirect:/scientist/dashboard?editId=" + countryEditForm.getCountryId() + "&success=saved#edit-section";
+        return ascending ? comparator : comparator.reversed();
     }
 
-    @SuppressWarnings("null")
-    @PostMapping("/add-record")
-    public String addRecord(Authentication authentication,
-                            @Valid @ModelAttribute("countryEditForm") CountryEditForm countryEditForm,
-                            BindingResult bindingResult,
-                            Model model) {
-
-        Country country = countryService.findById(countryEditForm.getCountryId());
-
-        if (countryEditForm.getNewRecord() == null) {
-            bindingResult.reject("newRecord", "Neuer Datensatz fehlt.");
-        }
-
-        if (bindingResult.hasErrors()) {
-            model.addAttribute("username", authentication.getName());
-            model.addAttribute("countryRows", countryService.findDashboardRows());
-            model.addAttribute("editMode", true);
-            model.addAttribute("scrollToEdit", true);
-            return "ScientistDashboard";
-        }
-
-        try {
-            countryService.updateCountryBaseData(countryEditForm.getCountryId(),
-                    countryEditForm.getCountry(),
-                    countryEditForm.getIsoCode());
-
-            co2EmissionService.addNewRecord(country,
-                    countryEditForm.getNewRecord(),
-                    authentication.getName());
-        } catch (IllegalArgumentException ex) {
-            bindingResult.addError(new FieldError(
-                    "countryEditForm",
-                    "newRecord.reportingYear",
-                    ex.getMessage()
-            ));
-
-            model.addAttribute("username", authentication.getName());
-            model.addAttribute("countryRows", countryService.findDashboardRows());
-            model.addAttribute("editMode", true);
-            model.addAttribute("scrollToEdit", true);
-            return "ScientistDashboard";
-        }
-
-        return "redirect:/scientist/dashboard?editId=" + countryEditForm.getCountryId() + "&success=record-added#edit-section";
-    }
-
-    @GetMapping("/cancel")
-    public String cancelEdit() {
-        return "redirect:/scientist/dashboard";
-    }
+    // Record-Klasse für Dashboard
+    public record CountryDashboardRow(
+        Long id,
+        String name,
+        String continent,
+        double avgEmission,
+        double minEmission,
+        double maxEmission,
+        int recordCount,
+        String editorName
+    ) {}
 }
