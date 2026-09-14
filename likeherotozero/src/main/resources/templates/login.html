@@ -23,34 +23,31 @@
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="login-box">
-            <h2>Login</h2>
+    <form th:action="@{/login}" method="post">
+    <label for="username">Benutzername oder E-Mail</label>
+    <input
+            type="text"
+            id="username"
+            name="username"
+            required>
 
-            <div th:if="${param.error}" class="alert alert-error">
-                Ungültige E-Mail oder Passwort
-            </div>
+    <label for="password">Passwort</label>
+    <input
+            type="password"
+            id="password"
+            name="password"
+            required>
 
-            <div th:if="${param.logout}" class="alert alert-success">
-                Sie wurden erfolgreich ausgeloggt
-            </div>
+    <button type="submit">Anmelden</button>
+</form>
 
-            <form th:action="@{/login}" method="post">
-                <div class="form-group">
-                    <label for="username">E-Mail</label>
-                    <input type="text" id="username" name="username" required>
-                </div>
-                <div class="form-group">
-                    <label for="password">Passwort</label>
-                    <input type="password" id="password" name="password" required>
-                </div>
-                <button type="submit">Anmelden</button>
-            </form>
+<div th:if="${param.error}">
+    Benutzername oder Passwort ist falsch.
+</div>
 
-            <div class="back-link">
-                <a href="/">← Zurück zur Startseite</a>
-            </div>
-        </div>
-    </div>
+<div th:if="${param.logout}">
+    Du wurdest erfolgreich abgemeldet.
+</div>
+
 </body>
 </html>

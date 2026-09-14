@@ -2,6 +2,7 @@ package de.likeherotozero.service;
 
 import de.likeherotozero.entity.ScientistUser;
 import de.likeherotozero.repository.ScientistUserRepository;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -21,14 +22,23 @@ public class CustomUserDetailsService implements UserDetailsService {
     }
 
     @Override
-    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        ScientistUser user = userRepository.findByEmail(email)
-            .orElseThrow(() -> new UsernameNotFoundException("Benutzer nicht gefunden: " + email));
+    public UserDetails loadUserByUsername(String usernameOrEmail)
+            throws UsernameNotFoundException {
 
-        return new User(
-            user.getEmail(),
-            user.getPassword(),
-            Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()))
-        );
+        ScientistUser scientistUser = userRepository.findByUsername(usernameOrEmail)
+                .or(() -> userRepository.findByEmail(usernameOrEmail))
+                .orElseThrow(() ->
+                        new UsernameNotFoundException(
+                                "Benutzer nicht gefunden: " + usernameOrEmail));
+
+        GrantedAuthority authority =
+                new SimpleGrantedAuthority("ROLE_" + scientistUser.getRole().name());
+
+        return User.builder()
+                .username(scientistUser.getUsername())
+                .password(scientistUser.getPasswordHash())
+                .authorities(Collections.singletonList(authority))
+                .disabled(!scientistUser.isEnabled())
+                .build();
     }
 }

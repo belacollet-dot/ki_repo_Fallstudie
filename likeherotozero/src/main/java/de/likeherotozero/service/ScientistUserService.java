@@ -46,7 +46,7 @@ public class ScientistUserService {
         ScientistUser user = new ScientistUser();
         user.setName(name);
         user.setEmail(email);
-        user.setPassword(passwordEncoder.encode(password));
+        user.setPasswordHash(passwordEncoder.encode(password));
         user.setRole(role != null ? role : UserRole.SCIENTIST);
 
         return userRepository.save(user);
@@ -71,7 +71,7 @@ public class ScientistUserService {
 
     public void updateUserPassword(@NonNull Long id, String newPassword) {
         ScientistUser user = getUserById(id);
-        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
         userRepository.save(user);
     }
 
