@@ -364,3 +364,97 @@ button:hover {
         grid-column: auto;
     }
 }
+
+/* home.html */
+/* ===== Länderauswahl ===== */
+
+.selection-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.country-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+    margin-bottom: 20px;
+    max-height: 360px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.country-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: var(--green-light);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.country-item:hover {
+    background: #cce4d7;
+    border-color: var(--green);
+}
+
+.country-item input[type="checkbox"] {
+    width: 17px;
+    height: 17px;
+    accent-color: var(--green);
+    flex-shrink: 0;
+}
+
+.country-item-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.country-name {
+    font-weight: bold;
+    color: var(--text);
+    font-size: 0.92rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.country-meta {
+    color: var(--muted);
+    font-size: 0.78rem;
+}
+
+/* ===== Diagramm ===== */
+
+.chart-container {
+    position: relative;
+    width: 100%;
+    max-height: 420px;
+}
+
+.chart-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    padding: 48px 24px;
+    color: var(--muted);
+    text-align: center;
+}
+
+.chart-placeholder svg {
+    color: var(--border);
+}
+
+.chart-placeholder p {
+    margin: 0;
+    font-size: 0.95rem;
+}

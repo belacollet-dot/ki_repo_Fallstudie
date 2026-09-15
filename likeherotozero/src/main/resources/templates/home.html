@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LikeHeroToZero – Startseite</title>
     <link rel="stylesheet" th:href="@{/css/style.css}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
@@ -14,7 +15,6 @@
             <img th:src="@{/images/logo.png}" alt="LikeHeroToZero Logo">
             <span>LikeHeroToZero</span>
         </a>
-
         <nav class="main-navigation">
             <a th:href="@{/}">Startseite</a>
             <a th:href="@{/emissions}">Emissionen</a>
@@ -26,95 +26,175 @@
 </header>
 
 <main class="page-container">
+
+    <!-- Intro -->
     <section class="hero">
         <h1>Willkommen</h1>
-        <p>
-            Auf dieser Startseite werden die vorhandenen Länderdaten
-            übersichtlich dargestellt.
+        <p class="page-intro">
+            Auf dieser Startseite werden die vorhandenen Länderdaten übersichtlich dargestellt.
+            Wähle Länder aus, um deren CO₂-Emissionen im Diagramm zu vergleichen.
         </p>
     </section>
 
+    <!-- Länderauswahl -->
     <section class="card">
-        <h2>Länderauswahl</h2>
-
-        <form th:action="@{/}" method="get" class="filter-bar">
+        <div class="selection-header">
+            <div>
+                <h2>Länderauswahl</h2>
+                <p class="page-intro">
+                    Wähle die Länder aus, die im Diagramm angezeigt werden sollen.
+                </p>
+            </div>
             <div class="form-group">
-                <label for="search">Land suchen</label>
+                <label for="countrySearch">Suche</label>
                 <input
-                        id="search"
                         type="text"
-                        name="search"
-                        th:value="${searchQuery}"
-                        placeholder="Zum Beispiel Deutschland">
+                        id="countrySearch"
+                        placeholder="Land suchen..."
+                        onkeyup="filterCountries()">
+            </div>
+        </div>
+
+        <form method="get" th:action="@{/}">
+            <div class="country-grid" id="countryList">
+                <label
+                        class="country-item"
+                        th:each="country : ${countries}"
+                        th:attr="data-name=${#strings.toLowerCase(country.name + ' ' + (country.isoCode ?: ''))}">
+
+                    <input
+                            type="checkbox"
+                            name="selectedCountries"
+                            th:value="${country.id}"
+                            th:checked="${selectedCountries != null and selectedCountries.contains(country.id)}">
+
+                    <div class="country-item-text">
+                        <span class="country-name" th:text="${country.name}">Ländername</span>
+                        <span class="country-meta" th:text="${country.isoCode}">ISO</span>
+                    </div>
+                </label>
             </div>
 
-            <input type="hidden" name="sortBy" th:value="${sortBy}">
-            <input type="hidden" name="ascending" th:value="${ascending}">
-
-            <button type="submit" class="btn-primary">Suchen</button>
+            <div class="button-row">
+                <button type="submit" class="btn-primary">Auswahl übernehmen</button>
+                <a class="btn btn-secondary" th:href="@{/}">Auswahl zurücksetzen</a>
+            </div>
         </form>
     </section>
 
+    <!-- Diagramm -->
     <section class="card">
-        <h2>Vorhandene Länder</h2>
+        <h2>Diagramm</h2>
 
-        <div class="table-wrapper">
-            <table class="data-table">
-                <thead>
-                <tr>
-                    <th>
-                        <a th:href="@{/(sortBy='name', ascending=${!ascending}, search=${searchQuery})}">
-                            Land
-                        </a>
-                    </th>
-                    <th>ISO-Code</th>
-                    <th>Kontinent</th>
-                    <th>Ø CO₂</th>
-                    <th>Min.</th>
-                    <th>Max.</th>
-                    <th>Datensätze</th>
-                    <th>Details</th>
-                </tr>
-                </thead>
+        <div class="chart-placeholder" th:if="${selectedCountryCount == null or selectedCountryCount == 0}">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                <path d="M3 3v18h18"/>
+                <path d="M7 16l4-4 4 4 4-6"/>
+            </svg>
+            <p>Bitte wähle zuerst mindestens ein Land aus.</p>
+        </div>
 
-                <tbody>
-                <tr th:each="country : ${countries}">
-                    <td th:text="${country.name}">Deutschland</td>
-                    <td th:text="${country.isoCode}">DEU</td>
-                    <td th:text="${country.continent ?: '-'}">Europa</td>
-                    <td th:text="${#numbers.formatDecimal(country.avgEmission, 1, 2)}">0.00</td>
-                    <td th:text="${#numbers.formatDecimal(country.minEmission, 1, 2)}">0.00</td>
-                    <td th:text="${#numbers.formatDecimal(country.maxEmission, 1, 2)}">0.00</td>
-                    <td th:text="${country.recordCount}">0</td>
-                    <td>
-                        <a
-                                class="btn"
-                                th:href="@{/country/{id}(id=${country.id})}">
-                            Öffnen
-                        </a>
-                    </td>
-                </tr>
+        <div th:if="${selectedCountryCount != null and selectedCountryCount > 0}">
+            <div class="chart-container">
+                <canvas id="emissionChart"></canvas>
+            </div>
 
-                <tr th:if="${#lists.isEmpty(countries)}">
-                    <td colspan="8">Keine Länder gefunden.</td>
-                </tr>
-                </tbody>
-            </table>
+            <!-- Daten für Chart.js als JSON übergeben -->
+            <script th:inline="javascript">
+                const chartData = /*[[${chartData}]]*/ null;
+
+                if (chartData) {
+                    const ctx = document.getElementById('emissionChart').getContext('2d');
+
+                    const COLORS = [
+                        '#28745a', '#e87535', '#1a5a8a', '#8b3a8b',
+                        '#b5a200', '#2a8a7a', '#c94a1a', '#3a6aaa'
+                    ];
+
+                    new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: chartData.years,
+                            datasets: chartData.datasets.map((ds, i) => ({
+                                label: ds.label,
+                                data: ds.data,
+                                borderColor: COLORS[i % COLORS.length],
+                                backgroundColor: COLORS[i % COLORS.length] + '22',
+                                borderWidth: 2,
+                                pointRadius: 4,
+                                pointHoverRadius: 6,
+                                tension: 0.3,
+                                fill: false
+                            }))
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: true,
+                            plugins: {
+                                legend: {
+                                    position: 'bottom',
+                                    labels: {
+                                        font: { size: 13 },
+                                        padding: 18,
+                                        usePointStyle: true
+                                    }
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: ctx =>
+                                            ctx.dataset.label + ': ' +
+                                            ctx.parsed.y.toLocaleString('de-DE', {
+                                                minimumFractionDigits: 2,
+                                                maximumFractionDigits: 2
+                                            }) + ' Mt CO₂'
+                                    }
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    title: {
+                                        display: true,
+                                        text: 'Jahr',
+                                        font: { size: 13 }
+                                    },
+                                    grid: { color: 'rgba(0,0,0,0.06)' }
+                                },
+                                y: {
+                                    title: {
+                                        display: true,
+                                        text: 'CO₂ (Mt)',
+                                        font: { size: 13 }
+                                    },
+                                    grid: { color: 'rgba(0,0,0,0.06)' },
+                                    ticks: {
+                                        callback: v => v.toLocaleString('de-DE')
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            </script>
         </div>
     </section>
 
-    <section class="card">
-        <h2>Diagramm</h2>
-        <p class="page-intro">
-            Wähle ein Land aus, um die historischen CO₂-Werte und das Diagramm
-            auf der Detailseite anzuzeigen.
-        </p>
-    </section>
 </main>
 
 <footer class="site-footer">
     <p>&copy; 2026 LikeHeroToZero</p>
 </footer>
+
+<!-- Suchfilter für Länder -->
+<script>
+    function filterCountries() {
+        const query = document.getElementById('countrySearch').value.toLowerCase();
+        document.querySelectorAll('#countryList .country-item').forEach(item => {
+            const name = item.getAttribute('data-name') || '';
+            item.style.display = name.includes(query) ? '' : 'none';
+        });
+    }
+</script>
 
 </body>
 </html>
