@@ -56,6 +56,10 @@
         </div>
 
         <form method="get" th:action="@{/}">
+            <input type="hidden" name="search" th:value="${searchQuery}">
+            <input type="hidden" name="sortBy" th:value="${sortBy}">
+            <input type="hidden" name="ascending" th:value="${ascending}">
+
             <div class="country-grid" id="countryList">
                 <label
                         class="country-item"
@@ -86,7 +90,8 @@
     <section class="card">
         <h2>Diagramm</h2>
 
-        <div class="chart-placeholder" th:if="${selectedCountryCount == null or selectedCountryCount == 0}">
+        <div class="chart-placeholder"
+             th:if="${selectedCountryCount == null or selectedCountryCount == 0}">
             <svg width="48" height="48" viewBox="0 0 24 24" fill="none"
                  stroke="currentColor" stroke-width="1.5" aria-hidden="true">
                 <path d="M3 3v18h18"/>
@@ -100,7 +105,6 @@
                 <canvas id="emissionChart"></canvas>
             </div>
 
-            <!-- Daten für Chart.js als JSON übergeben -->
             <script th:inline="javascript">
                 const chartData = /*[[${chartData}]]*/ null;
 
@@ -125,7 +129,8 @@
                                 pointRadius: 4,
                                 pointHoverRadius: 6,
                                 tension: 0.3,
-                                fill: false
+                                fill: false,
+                                spanGaps: true
                             }))
                         },
                         options: {
@@ -144,10 +149,12 @@
                                     callbacks: {
                                         label: ctx =>
                                             ctx.dataset.label + ': ' +
-                                            ctx.parsed.y.toLocaleString('de-DE', {
-                                                minimumFractionDigits: 2,
-                                                maximumFractionDigits: 2
-                                            }) + ' Mt CO₂'
+                                            (ctx.parsed.y != null
+                                                ? ctx.parsed.y.toLocaleString('de-DE', {
+                                                    minimumFractionDigits: 2,
+                                                    maximumFractionDigits: 2
+                                                }) + ' Mt CO₂'
+                                                : 'Keine Daten')
                                     }
                                 }
                             },
@@ -185,7 +192,6 @@
     <p>&copy; 2026 LikeHeroToZero</p>
 </footer>
 
-<!-- Suchfilter für Länder -->
 <script>
     function filterCountries() {
         const query = document.getElementById('countrySearch').value.toLowerCase();

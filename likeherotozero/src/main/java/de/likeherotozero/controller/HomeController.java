@@ -4,23 +4,13 @@ import de.likeherotozero.entity.Co2EmissionRecord;
 import de.likeherotozero.entity.Country;
 import de.likeherotozero.service.Co2EmissionService;
 import de.likeherotozero.service.CountryService;
-
-import org.springframework.lang.NonNull;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Controller
@@ -28,39 +18,57 @@ public class HomeController {
 
     private final CountryService countryService;
     private final Co2EmissionService emissionService;
+    private final ObjectMapper objectMapper;
 
-    public HomeController(CountryService countryService, Co2EmissionService emissionService) {
+    public HomeController(CountryService countryService,
+                          Co2EmissionService emissionService,
+                          ObjectMapper objectMapper) {
         this.countryService = countryService;
         this.emissionService = emissionService;
+        this.objectMapper = objectMapper;
     }
 
     @GetMapping("/")
     public String home(Model model,
+                       @RequestParam(required = false) List<Long> selectedCountries,
                        @RequestParam(required = false) String search,
                        @RequestParam(defaultValue = "name") String sortBy,
                        @RequestParam(defaultValue = "true") boolean ascending) {
-        
+
+        // Alle Länder laden (nur für die Checkbox-Liste, KEINE Emissionen pro Land)
         List<Country> countries = countryService.searchCountries(search);
 
-        // Länder mit Statistiken für das Dashboard
-        List<CountryDashboardRow> rows = countries.stream()
-            .map(country -> {
-                List<Co2EmissionRecord> records = emissionService.getEmissionsByCountry(country.getId());
-                return new CountryDashboardRow(
-                    country.getId(),
-                    country.getName(),
-                    country.getIsoCode(),
-                    country.getContinent(),
-                    emissionService.calculateAverage(records),
-                    emissionService.calculateMin(records),
-                    emissionService.calculateMax(records),
-                    records.size()
-                );
-            })
-            .sorted(getCountryComparator(sortBy, ascending))
-            .collect(Collectors.toList());
+        // Sortierung
+        @SuppressWarnings("null")
+        Comparator<Country> comparator = switch (sortBy) {
+            case "isoCode" -> Comparator.comparing(
+                    c -> c.getIsoCode() != null ? c.getIsoCode() : "",
+                    String.CASE_INSENSITIVE_ORDER);
+            case "continent" -> Comparator.comparing(
+                    c -> c.getContinent() != null ? c.getContinent() : "",
+                    String.CASE_INSENSITIVE_ORDER);
+            default -> Comparator.comparing(Country::getName, String.CASE_INSENSITIVE_ORDER);
+        };
 
-        model.addAttribute("countries", rows);
+        if (!ascending) {
+            comparator = comparator.reversed();
+        }
+
+        countries = countries.stream().sorted(comparator).collect(Collectors.toList());
+
+        // Auswahl
+        List<Long> selected = selectedCountries != null ? selectedCountries : List.of();
+
+        // Chart-Daten nur für ausgewählte Länder aufbauen
+        Object chartData = null;
+        if (!selected.isEmpty()) {
+            chartData = buildChartData(selected);
+        }
+
+        model.addAttribute("countries", countries);
+        model.addAttribute("selectedCountries", selected);
+        model.addAttribute("selectedCountryCount", selected.size());
+        model.addAttribute("chartData", chartData);
         model.addAttribute("searchQuery", search);
         model.addAttribute("sortBy", sortBy);
         model.addAttribute("ascending", ascending);
@@ -68,129 +76,53 @@ public class HomeController {
         return "home";
     }
 
-    @GetMapping("/country/{id}")
-    public String countryDetail(@PathVariable @NonNull Long id, Model model,
-                                @RequestParam(required = false) Integer year,
-                                @RequestParam(defaultValue = "year") String sortBy,
-                                @RequestParam(defaultValue = "false") boolean ascending) {
-        
-        Country country = countryService.getCountryById(id);
-        List<Co2EmissionRecord> records = emissionService.getEmissionsByCountry(id);
-
-        // Nach Jahr filtern
-        if (year != null) {
-            records = records.stream()
-                .filter(r -> r.getYear().equals(year))
-                .collect(Collectors.toList());
-        }
-
-        // Verfügbare Jahre für Dropdown
-        @SuppressWarnings("null")
-        List<Integer> availableYears = emissionService.getEmissionsByCountry(id).stream()
-            .map(Co2EmissionRecord::getYear)
-            .distinct()
-            .sorted()
-            .collect(Collectors.toList());
-
-        model.addAttribute("country", country);
-        model.addAttribute("emissions", records);
-        model.addAttribute("availableYears", availableYears);
-        model.addAttribute("selectedYear", year);
-
-        return "country-detail";
-    }
-
     @SuppressWarnings("null")
-    @GetMapping("/")
-    public String home(Model model,
-                   @RequestParam(required = false) List<Long> selectedCountries,
-                   @RequestParam(required = false) String search,
-                   @RequestParam(defaultValue = "name") String sortBy,
-                   @RequestParam(defaultValue = "true") boolean ascending) {
-
-
-    List<Country> countries = countryService.getAllCountries();
-    model.addAttribute("countries", countries);
-
-    List<Long> selected = selectedCountries != null ? selectedCountries : List.of();
-    model.addAttribute("selectedCountries", selected);
-    model.addAttribute("selectedCountryCount", selected.size());
-
-    // Chart-Daten aufbauen
-    if (!selected.isEmpty()) {
+    private Object buildChartData(List<Long> selectedIds) {
         // Alle Jahre sammeln
         Set<Integer> yearsSet = new TreeSet<>();
-        Map<Long, List<Co2EmissionRecord>> recordsByCountry = new HashMap<>();
+        Map<Long, Map<Integer, Double>> valuesByCountry = new LinkedHashMap<>();
 
-        for (Long id : selected) {
+        for (Long id : selectedIds) {
             List<Co2EmissionRecord> records = emissionService.getEmissionsByCountry(id);
-            recordsByCountry.put(id, records);
-            records.forEach(r -> yearsSet.add(r.getYear()));
+            Map<Integer, Double> valueByYear = new HashMap<>();
+
+            for (Co2EmissionRecord r : records) {
+                yearsSet.add(r.getYear());
+                // co2value zuerst, fallback auf emissionvalue
+                double val = r.getCo2Value() != null ? r.getCo2Value()
+                           : r.getEmissionValue() != null ? r.getEmissionValue()
+                           : 0.0;
+                valueByYear.put(r.getYear(), val);
+            }
+
+            valuesByCountry.put(id, valueByYear);
         }
 
         List<Integer> years = new ArrayList<>(yearsSet);
 
         List<Map<String, Object>> datasets = new ArrayList<>();
-        for (Long id : selected) {
+        for (Long id : selectedIds) {
             Country country = countryService.getCountryById(id);
-            Map<Integer, Double> valueByYear = recordsByCountry.get(id).stream()
-                .collect(Collectors.toMap(Co2EmissionRecord::getYear, Co2EmissionRecord::getCo2Value));
+            Map<Integer, Double> valueByYear = valuesByCountry.get(id);
 
-            List<Double> data = years.stream()
-                .map(y -> valueByYear.getOrDefault(y, null))
+            List<Object> data = years.stream()
+                .map(y -> (Object) valueByYear.getOrDefault(y, null))
                 .collect(Collectors.toList());
 
-            Map<String, Object> ds = new HashMap<>();
+            Map<String, Object> ds = new LinkedHashMap<>();
             ds.put("label", country.getName());
             ds.put("data", data);
             datasets.add(ds);
         }
 
-        Map<String, Object> chartData = new HashMap<>();
+        Map<String, Object> chartData = new LinkedHashMap<>();
         chartData.put("years", years);
         chartData.put("datasets", datasets);
 
-        model.addAttribute("chartData", new ObjectMapper().valueToTree(chartData));
-    } else {
-        model.addAttribute("chartData", null);
+        try {
+            return objectMapper.valueToTree(chartData);
+        } catch (Exception e) {
+            return null;
+        }
     }
-
-    return "home";
-    }
-
-    @GetMapping("/about")
-    public String about() {
-        return "about";
-    }
-
-    @GetMapping("/legal")
-    public String legal() {
-        return "legal";
-    }
-
-    private Comparator<CountryDashboardRow> getCountryComparator(String sortBy, boolean ascending) {
-        @SuppressWarnings("null")
-        Comparator<CountryDashboardRow> comparator = switch (sortBy) {
-            case "avgEmission" -> Comparator.comparingDouble(CountryDashboardRow::avgEmission);
-            case "minEmission" -> Comparator.comparingDouble(CountryDashboardRow::minEmission);
-            case "maxEmission" -> Comparator.comparingDouble(CountryDashboardRow::maxEmission);
-            case "recordCount" -> Comparator.comparingInt(CountryDashboardRow::recordCount);
-            case "isoCode" -> Comparator.comparing(r -> r.isoCode() != null ? r.isoCode() : "", String.CASE_INSENSITIVE_ORDER);
-            default -> Comparator.comparing(CountryDashboardRow::name, String.CASE_INSENSITIVE_ORDER);
-        };
-
-        return ascending ? comparator : comparator.reversed();
-    }
-
-    // Record-Klasse für Dashboard-Anzeige
-    public record CountryDashboardRow(
-        Long id,
-        String name,
-        String isoCode,
-        String continent,
-        double avgEmission,
-        double minEmission,
-        double maxEmission,
-        int recordCount
-    ) {}
 }
